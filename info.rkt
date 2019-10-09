@@ -1,8 +1,8 @@
 #lang info
-(define collection "racket-vulkan")
+(define collection "vulkan")
 (define deps '("base"))
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))
 (define scribblings '(("scribblings/racket-vulkan.scrbl" ())))
-(define pkg-desc "Generate Racket FFI bindings from Vulkan API registry.")
+(define pkg-desc "Vulkan integration for Racket")
 (define version "0.0")
 (define pkg-authors '(sage))
