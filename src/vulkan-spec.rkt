@@ -46,9 +46,11 @@
 
 ; Writes network-sourced content to the local mirror.
 (define (update-local-mirror)
-  (call-with-output-file*	local-mirror-path #:exists 'truncate
+  (call-with-output-file*
+    local-mirror-path
+    #:exists 'replace
     (lambda (port)
-      (displayln (port->string (source-spec-from-internet))))))
+      (displayln (port->string (source-spec-from-internet)) port))))
 
 ; Returns an input port given a desired source
 (define/contract (get-spec-port source)
