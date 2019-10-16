@@ -9,11 +9,19 @@
     ; Return a list of datums that can be written as a Racket module.
     [generate-vulkan-bindings (-> vulkan-spec? list?)]))
 
+(define (write-module-out signatures [out (current-output-port)])
+  (parameterize ([current-output-port out])
+    (displayln "#lang racket/base")
+    (displayln "(provide (all-defined-out))")
+    (displayln "(require ffi/unsafe ffi/unsafe/define)")
+    (displayln "(define-ffi-definer define-vulkan (ffi-lib \"libvulkan\"))")
+    (for ([sig signatures])
+      (writeln sig))))
 
 (module+ main
   (require racket/list)
-  (for ([datum (generate-vulkan-bindings (get-vulkan-spec 'local))])
-    (writeln datum)))
+  (write-module-out (generate-vulkan-bindings (get-vulkan-spec 'local))))
+
 
 ;---------------------------------------------------------------------------------------------------
 ; Implementation
