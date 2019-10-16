@@ -40,6 +40,15 @@
 (define (shrink-wrap-cdata x)
   (string-trim (string-join (filter string? (get-elements x)) "")))
 
+(define (get-all-cdata x)
+  (foldl (λ (kid str)
+           (string-append str
+                          (if (string? kid)
+                              kid
+                              (get-all-cdata kid))))
+         ""
+         (get-elements x)))
+
 (define (snatch-cdata t tx #:children-only? [kidsonly #f])
   (shrink-wrap-cdata (find-first-by-tag t (if kidsonly (list-set tx 0 (gensym))
                                               tx))))
