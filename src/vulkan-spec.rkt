@@ -50,7 +50,7 @@
     local-mirror-path
     #:exists 'replace
     (lambda (port)
-      (displayln (port->string (source-spec-from-internet)) port))))
+      (display (port->string (source-spec-from-internet)) port))))
 
 ; Returns an input port given a desired source
 (define/contract (get-spec-port source)
