@@ -32,6 +32,7 @@
          "./c-analysis.rkt"                 ; For building predicates on C text.
          "./vulkan-spec.rkt"                ; For sourcing VulkanAPI spec
          "./txexpr.rkt"                     ; For element analyis
+         "./curation.rkt"                   ; For making the registry easier to process.
          (rename-in ffi/unsafe [-> ffi->])) ; For Racket<>C type declarations
 
 (module+ test
@@ -40,68 +41,6 @@
 
 (define (generate-vulkan-bindings registry)
   (generate-signatures registry (curate-types registry)))
-
-; Return types sorted such that any dependency appears
-; before its dependent(s), and they appear in the groups
-; ordered by the list in section 10.2.3.
-(define (curate-types registry)
-  (define types (find-all-by-tag 'type registry))
-
-  ; The "define" category includes both C macros and C type declarations.
-  ; Strip out the macros to disambiguate the data. Note that predicate
-  ; assumes all macros start with VK_ and are all caps. Checking for
-  ; '#define' in the CDATA will remove legitimate declarations.
-  (define -macros (filter (λ (t)
-                            (define name (get-type-name t))
-                            (define category (attr-ref t 'category ""))
-                            (define is-macro (and (equal? category "define")
-                                                  (string-prefix? name "VK_")
-                                                  (equal? (string-upcase name)
-                                                          name)))
-                            (not is-macro))
-                          types))
-
-  (define (already-in-racket? x)
-    (member (string->symbol (get-type-name x))
-            '(void float double)))
-
-  ; Include vk_platform and top-level category-less types as basetypes.
-  (define +ctypes (map (λ (x)
-                         (define requires (attr-ref x 'requires ""))
-                         (if (and (equal? requires "vk_platform")
-                                  (not (already-in-racket? x)))
-                             (attr-set x 'category "ctype")
-                             x))
-                       -macros))
-
-  (define +forward-decls (map (λ (x)
-                                (define requires (attr-ref x 'requires ""))
-                                (define category (attr-ref x 'category ""))
-                                (if (or (string-suffix? requires ".h")
-                                        (member category '("struct" "union")))
-                                    (attr-set x 'category "symdecl")
-                                    x))
-                              +ctypes))
-
-  
-  (define (category cat)
-    (filter (λ (x) (equal? (attr-ref x 'category "")
-                           cat))
-            +forward-decls))
-
-  (apply append (map category '("ctype"
-                                "symdecl"
-                                "define"
-                                "basetype"
-                                "handle"
-                                "enum"
-                                ; "group" Uncomment when the registry starts to use this.
-                                "bitmask"
-                                "struct"
-                                "union"
-                                "funcpointer"))))
-
-
 
 (define (generate-basetype-signature type-xexpr [registry #f])
   (define name (get-type-name type-xexpr))
