@@ -31,7 +31,6 @@
          racket/string
          "./vulkan-spec.rkt"                ; For sourcing VulkanAPI spec
          "./txexpr.rkt"                     ; For element analyis
-         graph                              ; For dependency modeling
          (rename-in ffi/unsafe [-> ffi->])) ; For Racket<>C type declarations
 
 (module+ test
@@ -45,9 +44,6 @@
 ; before its dependent(s), and they appear in the groups
 ; ordered by the list in section 10.2.3.
 (define (curate-types registry)
-  ; Right now I am trusting that dependencies come before
-  ; dependents in the registry for brevity. The guide
-  ; does not guarentee this will happen, however.
   (define types (find-all-by-tag 'type registry))
 
   ; The "define" category includes both C macros and C type declarations.
