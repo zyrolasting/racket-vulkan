@@ -64,8 +64,8 @@
       types))
 
 
-; Return types in sorted groups.
-(define (curate-types registry)
+; Return declaration elements in sorted groups.
+(define (curate-registry registry)
   (define curate (compose categorize-forward-declarations
                           categorize-c-types
                           remove-c-macros))

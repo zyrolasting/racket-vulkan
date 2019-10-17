@@ -477,7 +477,7 @@
 ;; ffi/unsafe declarations for use in Racket.
 
 (define (generate-vulkan-bindings registry)
-  (define ordered (curate-types registry))
+  (define ordered (curate-registry registry))
 
   (define category=>proc
     `#hash(("ctype"       . ,generate-ctype-signature)
