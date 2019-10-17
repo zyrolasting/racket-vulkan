@@ -50,34 +50,66 @@
   ; does not guarentee this will happen, however.
   (define types (find-all-by-tag 'type registry))
 
-  ; Include vk_platform and top-level category-less types as basetypes.
-  (define +ctypes (map (λ (x) (if (equal? (attr-ref x 'requires "")
-                                          "vk_platform")
-                                  (attr-set x 'category "ctype")
-                                  x))
-                       types))
+  ; The "define" category includes both C macros and C type declarations.
+  ; Strip out the macros to disambiguate the data. Note that predicate
+  ; assumes all macros start with VK_ and are all caps. Checking for
+  ; '#define' in the CDATA will remove legitimate declarations.
+  (define -macros (filter (λ (t)
+                            (define name (get-type-name t))
+                            (define category (attr-ref t 'category ""))
+                            (define is-macro (and (equal? category "define")
+                                                  (string-prefix? name "VK_")
+                                                  (equal? (string-upcase name)
+                                                          name)))
+                            (not is-macro))
+                          types))
 
+  (define (already-in-racket? x)
+    (member (string->symbol (get-type-name x))
+            '(void float double)))
+
+  ; Include vk_platform and top-level category-less types as basetypes.
+  (define +ctypes (map (λ (x)
+                         (define requires (attr-ref x 'requires ""))
+                         (if (and (equal? requires "vk_platform")
+                                  (not (already-in-racket? x)))
+                             (attr-set x 'category "ctype")
+                             x))
+                       -macros))
+
+  (define +forward-decls (map (λ (x)
+                                (define requires (attr-ref x 'requires ""))
+                                (define category (attr-ref x 'category ""))
+                                (if (or (string-suffix? requires ".h")
+                                        (member category '("struct" "union")))
+                                    (attr-set x 'category "symdecl")
+                                    x))
+                              +ctypes))
+
+  
   (define (category cat)
     (filter (λ (x) (equal? (attr-ref x 'category "")
                            cat))
-            types))
+            +forward-decls))
 
   (apply append (map category '("ctype"
+                                "symdecl"
+                                "define"
                                 "basetype"
                                 "handle"
                                 "enum"
                                 ; "group" Uncomment when the registry starts to use this.
                                 "bitmask"
-                                "funcpointer"
                                 "struct"
-                                "union"))))
+                                "union"
+                                "funcpointer"))))
 
 
 (define (cname str)
   (string->symbol (string-append "_" str)))
+
 (define (cnamef fmt-string . args)
   (cname (apply format fmt-string args)))
-
 
 (define (infer-pointer-depth undecorated-type characters)
   (define pointer-depth
@@ -99,16 +131,33 @@
 
   `(define ,(cname name) ,(cname original-type)))
 
+(define (generate-symdecl-signature type-xexpr [registry #f])
+  (define name (get-type-name type-xexpr))
+  `(define ,(cname name) ',(string->symbol name)))
+
+; Note that this assumes C macros won't appear. If they do,
+; then you'll get useless identifiers.
+(define generate-define-signature
+  (procedure-rename generate-symdecl-signature
+                    'generate-define-signature))
+
 (define (generate-ctype-signature type-xexpr [registry #f])
   (define registry-type-name (get-type-name type-xexpr))
   (define racket-id (cname registry-type-name))
-  ; Note: This will produce redundant declarations like
-  ; (define _void _void). Hopefully benign.
-  ;
-  ; The _t replacement occurs because Racket C numeric types exclude them.
-  `(define ,racket-id ,(cname (string-replace registry-type-name
-                                              "_t"
-                                              ""))))
+
+  (define name=>existing
+    #hash(("char" . "sbyte")))
+
+  (define type-id
+   (if (hash-has-key? name=>existing registry-type-name)
+       (hash-ref name=>existing registry-type-name)
+       ; The _t replacement occurs because Racket C numeric types exclude them,
+       ; and Racket already has bindings for _size, _uint8, etc.
+       (string-replace registry-type-name
+                       "_t"
+                       "")))
+
+  `(define ,racket-id ,(cname type-id)))
 (module+ test
   (test-equal? "Generate basetype without _t"
                (generate-ctype-signature '(type ((category "ctype") (name "void"))))
@@ -118,22 +167,24 @@
                '(define _uint32_t _uint32)))
 
 
-(define (generate-member-signature member-xexpr)
-  (define name (snatch-cdata 'name member-xexpr))
-  (define undecorated-type (snatch-cdata 'type member-xexpr))
-  (define characters (string->list (shrink-wrap-cdata member-xexpr)))
-  (define type (infer-pointer-depth undecorated-type characters))
-
-  `(,(string->symbol name) ,type))
-
-
 ;; ------------------------------------------------
 ;; C unions correspond to <type category="union">
 
+(define (generate-member-signature/union member-xexpr)
+  (define undecorated-type (snatch-cdata 'type member-xexpr))
+  (define cdata (get-all-cdata member-xexpr))
+  (define characters (string->list cdata))
+  (define array-size-match (regexp-match #px"\\[([^\\]]+)\\]" cdata))
+  (define ctype (cname undecorated-type))
+  (if array-size-match
+      `(_list-struct . ,(build-list (string->number (cadr array-size-match))
+                                    (λ _ ctype)))
+      `(_list-struct ,ctype)))
+
 (define (generate-union-signature union-xexpr [registry #f])
   `(define ,(cname (get-type-name union-xexpr))
-     (make-union-type
-      . ,(map generate-member-signature
+     (_union
+      . ,(map generate-member-signature/union
               (get-elements-of-tag 'member
                                    union-xexpr)))))
 
@@ -152,19 +203,31 @@
     (test-equal? "(generate-union-signature)"
                  (generate-union-signature example-union-xexpr)
                  '(define _VkClearColorValue
-                    (make-union-type (float32 (_cpointer _float))
-                                     (int32 (_cpointer _int32_t))
-                                     (uint32 (_cpointer _uint32_t))))))
+                    (_union (_list-struct _float _float _float _float)
+                            (_list-struct _int32_t _int32_t _int32_t _int32_t)
+                            (_list-struct _uint32_t _uint32_t _uint32_t _uint32_t)))))
 
 
 ;; ------------------------------------------------
 ;; C structs correspond to <type category="struct">
 
 (define (generate-struct-signature struct-xexpr [registry #f])
-  `(define-cstruct ,(cname (get-type-name struct-xexpr))
-     . ,(map generate-member-signature
-            (get-elements-of-tag 'member
-                                 struct-xexpr))))
+  (define struct-name (get-type-name struct-xexpr))
+  (define (generate-member-signature member-xexpr)
+    (define name (snatch-cdata 'name member-xexpr))
+    (define undecorated-type (snatch-cdata 'type member-xexpr))
+    (define characters (string->list (shrink-wrap-cdata member-xexpr)))
+    (define type (infer-pointer-depth (if (equal? undecorated-type struct-name)
+                                          "void"
+                                          undecorated-type)
+                                      characters))
+
+    `(,(string->symbol name) ,type))
+
+  `(define-cstruct ,(cname struct-name)
+     . (,(map generate-member-signature
+             (get-elements-of-tag 'member
+                                  struct-xexpr)))))
 
 (module+ test
   ; Faithful parse of vk.xml fragment. Do not modify.
@@ -230,17 +293,25 @@
     (test-equal? "(generate-struct-signature)"
                  (generate-struct-signature example-struct-xexpr)
                  `(define-cstruct _VkDeviceCreateInfo
-                    (sType _VkStructureType)
-                    (pNext (_cpointer _void))
-                    (flags _VkDeviceCreateFlags)
-                    (queueCreateInfoCount _uint32_t)
-                    (pQueueCreateInfos (_cpointer _VkDeviceQueueCreateInfo))
-                    (enabledLayerCount _uint32_t)
-                    (ppEnabledLayerNames (_cpointer (_cpointer _char)))
-                    (enabledExtensionCount _uint32_t)
-                    (ppEnabledExtensionNames (_cpointer (_cpointer _char)))
-                    (pEnabledFeatures (_cpointer _VkPhysicalDeviceFeatures)))))
+                    ((sType _VkStructureType)
+                     (pNext (_cpointer _void))
+                     (flags _VkDeviceCreateFlags)
+                     (queueCreateInfoCount _uint32_t)
+                     (pQueueCreateInfos (_cpointer _VkDeviceQueueCreateInfo))
+                     (enabledLayerCount _uint32_t)
+                     (ppEnabledLayerNames (_cpointer (_cpointer _char)))
+                     (enabledExtensionCount _uint32_t)
+                     (ppEnabledExtensionNames (_cpointer (_cpointer _char)))
+                     (pEnabledFeatures (_cpointer _VkPhysicalDeviceFeatures)))))
 
+    
+    (test-equal? "(generate-struct-signature): circular"
+                 (generate-struct-signature
+                  '(type ((category "struct")
+                          (name "C"))
+                         (member (type "C") "* " (name "pNext"))))
+                 `(define-cstruct _C
+                    ((pNext (_cpointer _void))))))
 
 ;; ------------------------------------------------------------------
 ;; Handles are just pointers to forward-declared structs with private
@@ -442,6 +513,8 @@
   (define category=>proc
     `#hash(("ctype"       . ,generate-ctype-signature)
            ("basetype"    . ,generate-basetype-signature)
+           ("symdecl"     . ,generate-symdecl-signature)
+           ("define"      . ,generate-define-signature)
            ("handle"      . ,generate-handle-signature)
            ("enum"        . ,generate-enum-signature)
            ("bitmask"     . ,generate-bitmask-signature)
@@ -451,5 +524,12 @@
 
   (for/list ([type (in-list ordered)])
     (define category (attr-ref type 'category ""))
-    (define proc (hash-ref category=>proc category))
-    (proc type registry)))
+    (define alias (attr-ref type 'alias #f))
+    (if alias
+        `(define ,(cname (get-type-name type)) ,(cname alias))
+        ((hash-ref category=>proc category) type registry))))
+
+(module+ test
+  (test-true "E2E does not crash when producing data."
+             (andmap list?
+                     (generate-vulkan-bindings (get-vulkan-spec 'local)))))
