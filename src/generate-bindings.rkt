@@ -9,23 +9,14 @@
     ; Return a list of datums that can be written as a Racket module.
     [generate-vulkan-bindings (-> vulkan-spec? list?)]))
 
-(define (write-module-out signatures [out (current-output-port)])
-  (parameterize ([current-output-port out])
-    (displayln "#lang racket/base")
-    (displayln "(provide (all-defined-out))")
-    (displayln "(require ffi/unsafe ffi/unsafe/define)")
-    (displayln "(define-ffi-definer define-vulkan (ffi-lib \"libvulkan\"))")
-    (for ([sig signatures])
-      (writeln sig))))
-
 (module+ main
   (require racket/list)
   (write-module-out (generate-vulkan-bindings (get-vulkan-spec 'local))))
 
 
-;---------------------------------------------------------------------------------------------------
-; Implementation
-; Registry guide: https://www.khronos.org/registry/vulkan/specs/1.1/registry.html
+;;-----------------------------------------------------------------------------------
+;; Implementation
+;; Registry guide: https://www.khronos.org/registry/vulkan/specs/1.1/registry.html
 
 (require racket/list
          racket/string
@@ -39,8 +30,19 @@
   (require rackunit
            racket/list))
 
-(define (generate-vulkan-bindings registry)
-  (generate-signatures registry (curate-types registry)))
+(define (write-module-out signatures [out (current-output-port)])
+  (parameterize ([current-output-port out])
+    (displayln "#lang racket/base")
+    (displayln "(provide (all-defined-out))")
+    (displayln "(require ffi/unsafe ffi/unsafe/define)")
+    (displayln "(define-ffi-definer define-vulkan (ffi-lib \"libvulkan\"))")
+    (for ([sig signatures])
+      (writeln sig))))
+
+
+;; -------------------------------------------------------------
+;; The "basetype" category seems to be more from the perspective
+;; of Vulkan than C, since they appear as typedefs of C types.
 
 (define (generate-basetype-signature type-xexpr [registry #f])
   (define name (get-type-name type-xexpr))
@@ -50,15 +52,47 @@
 
   `(define ,(cname name) ,(cname original-type)))
 
+(module+ test
+  (test-equal? "(generate-basetype-signature)"
+               (generate-basetype-signature '(type ((category "basetype"))
+                                                   "typedef "
+                                                   (type "uint64_t")
+                                                   " "
+                                                   (name "VkDeviceAddress")
+                                                   ";"))
+               '(define _VkDeviceAddress _uint64_t)))
+
+
+;; -------------------------------------------------------------
+;; The "symdecl" category is entirely made up by curated.rkt
+;; to shove dangling type names to the top of the list.
+
 (define (generate-symdecl-signature type-xexpr [registry #f])
   (define name (get-type-name type-xexpr))
   `(define ,(cname name) ',(string->symbol name)))
 
-; Note that this assumes C macros won't appear. If they do,
-; then you'll get useless identifiers.
+(module+ test
+  (test-equal? "(generate-symdecl-signature)"
+               (generate-symdecl-signature '(type ((category "symdecl")
+                                                   (name "VkDeviceAddress"))))
+               '(define _VkDeviceAddress 'VkDeviceAddress)))
+
+
+;; ------------------------------------------------------------------
+;; The "define" category is related, but may contain C code of several
+;; meanings for our purposes. The curation step removes C macros, and
+;; the remaining types have a relevant name.  For those reasons we can
+;; treat "define" like "symdecl".
+
 (define generate-define-signature
   (procedure-rename generate-symdecl-signature
                     'generate-define-signature))
+
+
+;; ------------------------------------------------------------------
+;; "ctype" is also made up. It's for types that are actual C types
+;; that we can translate directly to identifiers provided by
+;; ffi/unsafe.
 
 (define (generate-ctype-signature type-xexpr [registry #f])
   (define registry-type-name (get-type-name type-xexpr))
@@ -77,11 +111,12 @@
                        "")))
 
   `(define ,racket-id ,(cname type-id)))
+
 (module+ test
-  (test-equal? "Generate basetype without _t"
+  (test-equal? "Generate ctype without _t"
                (generate-ctype-signature '(type ((category "ctype") (name "void"))))
                '(define _void _void))
-  (test-equal? "Generate basetype signature with _t"
+  (test-equal? "Generate ctype signature with _t"
                (generate-ctype-signature '(type ((category "ctype") (name "uint32_t"))))
                '(define _uint32_t _uint32)))
 
@@ -362,9 +397,11 @@
                     VK_SHADER_STAGE_ALL = 2147483647))))))
 
 
-; <type category="bitmask"> is just a C type declaration
-; that happens to contain a typedef. Declaring _bitmask
-; in Racket actually happens as part of processing enums.
+;; ------------------------------------------------------------------
+; <type category="bitmask"> is just a C type declaration that happens
+; to contain a typedef. Declaring _bitmask in Racket actually happens
+; as part of processing enums.
+
 (define (generate-bitmask-signature bitmask-xexpr [registry #f])
   (define alias (attr-ref bitmask-xexpr 'alias #f))
   `(define ,(cname (get-type-name bitmask-xexpr))
@@ -382,6 +419,13 @@
                                                   (name "VkFramebufferCreateFlags")))
                '(define _VkFramebufferCreateFlags _VkFlags)))
 
+
+;; ------------------------------------------------------------------
+;; <type category="funcpointer"> hurts a little because parameter
+;; type tags are floating in a soup of C code. I assume that only
+;; pointer indirection matters and check for '*' in the next sibling
+;; strings after the parameter types. The return type is not even
+;; in a tag at all, so I have a different approach to deduce it.
 
 (define (generate-funcpointer-signature funcpointer-xexpr [registry #f])
   (define name (get-type-name funcpointer-xexpr))
@@ -428,7 +472,13 @@
                                                                     ->
                                                                     (_cpointer _void))))))
 
-(define (generate-signatures registry ordered)
+;; ------------------------------------------------------------------
+;; It all comes down to this, the entry point that returns a list of
+;; ffi/unsafe declarations for use in Racket.
+
+(define (generate-vulkan-bindings registry)
+  (define ordered (curate-types registry))
+
   (define category=>proc
     `#hash(("ctype"       . ,generate-ctype-signature)
            ("basetype"    . ,generate-basetype-signature)
@@ -447,6 +497,7 @@
     (if alias
         `(define ,(cname (get-type-name type)) ,(cname alias))
         ((hash-ref category=>proc category) type registry))))
+
 
 (module+ test
   (test-true "E2E does not crash when producing data."
