@@ -29,6 +29,7 @@
 
 (require racket/list
          racket/string
+         "./c-analysis.rkt"                 ; For building predicates on C text.
          "./vulkan-spec.rkt"                ; For sourcing VulkanAPI spec
          "./txexpr.rkt"                     ; For element analyis
          (rename-in ffi/unsafe [-> ffi->])) ; For Racket<>C type declarations
@@ -100,23 +101,6 @@
                                 "union"
                                 "funcpointer"))))
 
-
-(define (cname str)
-  (string->symbol (string-append "_" str)))
-
-(define (cnamef fmt-string . args)
-  (cname (apply format fmt-string args)))
-
-(define (infer-pointer-depth undecorated-type characters)
-  (define pointer-depth
-    (count (λ (ch) (or (char=? #\* ch)
-                       (char=? #\[ ch))) ; TODO: Should this be wrapped as an array type?
-           characters))
-
-  ; Wrap pointer declarations equal to the number of '*'s
-  (for/fold ([sig (cname undecorated-type)])
-            ([i (in-range pointer-depth)])
-    `(_cpointer ,sig)))
 
 
 (define (generate-basetype-signature type-xexpr [registry #f])
