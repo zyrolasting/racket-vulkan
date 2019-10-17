@@ -17,9 +17,11 @@ platform installed---e.g. @litchar{libvulkan.so} for Linux or @litchar{vulkan1.d
 For development purposes this means installing the @hyperlink["https://vulkan.lunarg.com/sdk/home"]{Vulkan SDK}.
 For consumption purposes this means installing graphic drivers including a copy the aforementioned library.
 
-All C function and type names in Vulkan are made available verbatim,
-so @hyperlink["https://www.khronos.org/registry/vulkan/specs/1.1-extensions/man/html/vkCreateInstance.html"]{@litchar{vkCreateInstance}}
-is available as a procedure called @litchar{vkCreateInstance}.
+@bold{This project is nowhere @italic{near} complete.} If you are interested in contributing
+or making a suggestion, please contact me. The source is available @hyperlink["https://github.com/zyrolasting/racket-vulkan"]{here}.
 
-@bold{This project is nowhere @italic{near} complete.} If you are interested in contributing,
-please contact me.
+The interface should be considered unstable until declared otherwise.
+My intention is to make all C function and type names in Vulkan are available verbatim,
+so @hyperlink["https://www.khronos.org/registry/vulkan/specs/1.1-extensions/man/html/vkCreateInstance.html"]{@litchar{vkCreateInstance}}
+is available as a procedure called @litchar{vkCreateInstance}. The unsafe variants are the same, but prefixed
+with an underscore.
