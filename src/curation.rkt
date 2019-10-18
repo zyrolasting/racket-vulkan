@@ -3,6 +3,9 @@
 ;; -------------------------------------------------------------------
 ;; This module is responsible for curating the xexpr representation of
 ;; the Vulkan Registry into a new xexpr that's easier to process.
+;; Specifically, I cannibalize the "category" attribute from the
+;; <type> element and apply it in more ways to remove ambiguities,
+;; and remove/restructure data to make them more useable.
 
 (provide (all-defined-out))
 
@@ -11,6 +14,10 @@
          racket/string
          "./txexpr.rkt"
          "./c-analysis.rkt")
+
+(module+ test
+  (require rackunit))
+
 
 (define (get-types-by-category cat types)
   (filter (λ (x) (equal? (attr-ref x 'category "") cat))
@@ -63,22 +70,48 @@
             x))
       types))
 
+;; Not all <enums> elements are actually C enumerations.
+;; Categorize them so we know to treat them differently.
+(define (categorize-enums-that-arent enums-list)
+  (filter-map
+   (λ (x)
+     (and (not (attrs-have-key? x 'type))
+          (attr-set x 'category "consts")))
+   enums-list))
+
+(module+ test
+  (test-equal? "(categorize-enums-that-arent)"
+               (categorize-enums-that-arent
+                '((enums ((name "n") (type "t"))
+                         (enum ((name "a") (value "1")))
+                         (enum ((name "b") (value "2"))))
+                  (enums ((name "p"))
+                         (enum ((name "x") (value "1")))
+                         (enum ((name "y") (value "2"))))))
+               '((enums ((category "consts") (name "p"))
+                        (enum ((name "x") (value "1")))
+                        (enum ((name "y") (value "2")))))))
+
 
 ; Return declaration elements in sorted groups.
 (define (curate-registry registry)
-  (define curate (compose categorize-forward-declarations
-                          categorize-c-types
-                          remove-c-macros))
+  (define curate-types (compose categorize-forward-declarations
+                                categorize-c-types
+                                remove-c-macros))
+  (define curate-enums (compose categorize-enums-that-arent))
 
-  (define curated-types (curate (find-all-by-tag 'type registry)))
+  (define curated-declarations
+    (append (curate-types (find-all-by-tag 'type registry))
+            (curate-enums (find-all-by-tag 'enums registry))))
 
   (apply append
-         (map (λ (c) (get-types-by-category c curated-types))
+         (map (λ (c) (get-types-by-category c curated-declarations))
          '("ctype"
            "symdecl"
            "define"
            "basetype"
            "handle"
+           "consts"
            "enum"
            ; "group" Uncomment when the registry starts to use this.
            "bitmask"

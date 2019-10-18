@@ -258,7 +258,7 @@
                      (ppEnabledExtensionNames (_cpointer (_cpointer _char)))
                      (pEnabledFeatures (_cpointer _VkPhysicalDeviceFeatures)))))
 
-    
+
     (test-equal? "(generate-struct-signature): circular"
                  (generate-struct-signature
                   '(type ((category "struct")
@@ -398,6 +398,69 @@
 
 
 ;; ------------------------------------------------------------------
+;; This handles those <enums> that are not actually C enum types.
+
+(define (generate-consts-signature enum-xexpr [registry #f])
+  ; Read this carefully. Notice that we're in quasiquote mode, and
+  ; the expression expands such that (system-type 'word) expands
+  ; on the client's system, but the "LL" check expands during
+  ; the runtime, while control is in this procedure.
+  ;
+  ; The intent is to make sure the client's system uses its own
+  ; word size when Vulkan uses the value ~0UL.
+  (define (compute-~0-declaration literal)
+    ; Extract subtraction operand
+    (define sub-op/match (regexp-match* #px"-\\d" literal))
+    (define sub-op (if (empty? sub-op/match)
+                       0
+                       (abs (string->number (car sub-op/match)))))
+
+    `(- (integer-bytes->integer (make-bytes (if ,(string-contains? literal "LL")
+                                                8
+                                                (/ (system-type 'word) 8)) 255)
+                                ,(string-contains? literal "U"))
+        ,sub-op))
+
+  (define (c-numeric-lit->number c-num-lit-string)
+    (define basenum (string->number (car (regexp-match* #px"\\d+"
+                                                        c-num-lit-string))))
+
+    (if (string-contains? c-num-lit-string "~")
+        (compute-~0-declaration c-num-lit-string)
+        basenum))
+
+  `(begin
+     . ,(map (λ (enumerant)
+               `(define ,(cname (attr-ref enumerant 'name))
+                  ,(if (attrs-have-key? enumerant 'alias)
+                       (cname (attr-ref enumerant 'alias))
+                       (c-numeric-lit->number (attr-ref enumerant 'value)))))
+             (filter (λ (x) (tag=? 'enum x))
+                     (get-elements enum-xexpr)))))
+
+(module+ test
+  (test-equal? "(generate-consts-signature)"
+               (generate-consts-signature
+                '(enums (enum ((value "(~0U)") (name "A")))
+                        (enum ((value "(~0ULL-2)") (name "B")))
+                        (enum ((value "(~0L)") (name "C")))
+                        (enum ((value "256") (name "D")))
+                        (enum ((name "E") (alias "C")))))
+               '(begin
+                  (define _A
+                    (- (integer-bytes->integer (make-bytes (if #f 8 (/ (system-type 'word) 8)) 255) #t)
+                       0))
+                  (define _B
+                    (- (integer-bytes->integer (make-bytes (if #t 8 (/ (system-type 'word) 8)) 255) #t)
+                       2))
+                  (define _C
+                    (- (integer-bytes->integer (make-bytes (if #f 8 (/ (system-type 'word) 8)) 255) #f)
+                       0))
+                  (define _D 256)
+                  (define _E _C))))
+
+
+;; ------------------------------------------------------------------
 ; <type category="bitmask"> is just a C type declaration that happens
 ; to contain a typedef. Declaring _bitmask in Racket actually happens
 ; as part of processing enums.
@@ -430,7 +493,7 @@
 (define (generate-funcpointer-signature funcpointer-xexpr [registry #f])
   (define name (get-type-name funcpointer-xexpr))
   (define text-signature (get-all-cdata funcpointer-xexpr))
-  
+
   ; Deduce the formal parameter types
   (define children (get-elements funcpointer-xexpr))
   (define parameter-type-elements (filter (λ (x) (tag=? 'type x)) children))
@@ -444,7 +507,7 @@
                                                       (string->list decl)))
                                parameter-type-elements
                                adjacent-cdata))
-  
+
   ; Deduce the return type
   (define return-signature (cadr (regexp-match #px"typedef ([^\\(]+)" text-signature)))
   (define undecorated-return-type (regexp-replace* #px"[\\s\\*\\[\\]]" return-signature ""))
@@ -481,6 +544,7 @@
 
   (define category=>proc
     `#hash(("ctype"       . ,generate-ctype-signature)
+           ("consts"      . ,generate-consts-signature)
            ("basetype"    . ,generate-basetype-signature)
            ("symdecl"     . ,generate-symdecl-signature)
            ("define"      . ,generate-define-signature)
