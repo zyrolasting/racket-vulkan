@@ -30,6 +30,44 @@
   (require rackunit
            racket/list))
 
+(define platform-bindings
+  ; X + Xrandr
+  '((define VisualID _ulong)
+    (define Window _ulong)
+    (define RROutput _ulong)
+    (define Display 'Display)
+
+    ; Wayland
+    (define wl_display 'wl_display)
+    (define wl_surface 'wl_surface)
+
+    ; Windows
+    ; http://web.archive.org/web/20190911051224/https://docs.microsoft.com/en-us/windows/win32/winprog/windows-data-types
+    (define HANDLE (_cpointer _void))
+    (define HINSTANCE HANDLE)
+    (define HWND HANDLE)
+    (define HMONITOR HANDLE)
+    (define DWORD _ulong)
+    (define LPCWSTR (_cpointer _wchar))
+    (define SECURITY_ATTRIBUTES 'SECURITY_ATTRIBUTES)
+
+    ; XCB
+    ; https://code.woboq.org/qt5/include/xcb/xproto.h.html
+    (define xcb_visualid_t _uint32)
+    (define xcb_window_t _uint32)
+    (define xcb_connection_t 'xcb_connection_t)
+
+    ; Zircon (Fuchsia OS)
+    ; https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/public/zircon/types.h
+    (define zx_handle_t _uint32)
+
+    ; These are apparently behind an NDA. Even if I knew what these were,
+    ; I couldn't put them here.
+    ; https://github.com/KhronosGroup/Vulkan-Docs/issues/1000
+    (define GgpStreamDescriptor (_cpointer _void))
+    (define GgpFrameToken (_cpointer _void))))
+
+
 (define (write-module-out signatures [out (current-output-port)])
   (parameterize ([current-output-port out])
     (displayln "#lang racket/base")
@@ -37,6 +75,8 @@
     (displayln "(require ffi/unsafe ffi/unsafe/define)")
     (displayln "(define-ffi-definer define-vulkan (ffi-lib \"libvulkan\")")
     (displayln "  #:default-make-fail make-not-available)")
+    (for ([sig platform-bindings])
+      (writeln sig))
     (for ([sig signatures])
       (writeln sig))))
 
