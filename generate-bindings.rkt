@@ -64,7 +64,14 @@
     ; I couldn't put them here.
     ; https://github.com/KhronosGroup/Vulkan-Docs/issues/1000
     (define GgpStreamDescriptor (_cpointer _void))
-    (define GgpFrameToken (_cpointer _void))))
+    (define GgpFrameToken (_cpointer _void))
+
+    (define (VK_MAKE_VERSION major minor patch)
+      (bitwise-ior (arithmetic-shift major 22)
+                   (arithmetic-shift minor 12)
+                   (arithmetic-shift patch 0)))
+    (define VK_API_VERSION_1_0 (VK_MAKE_VERSION 1 0 0))
+    (define VK_API_VERSION_1_1 (VK_MAKE_VERSION 1 1 0))))
 
 
 (define (write-module-out signatures [out (current-output-port)])
