@@ -23,5 +23,4 @@ or making a suggestion, please contact me. The source is available @hyperlink["h
 The interface should be considered unstable until declared otherwise.
 My intention is to make all C function and type names in Vulkan are available verbatim,
 so @hyperlink["https://www.khronos.org/registry/vulkan/specs/1.1-extensions/man/html/vkCreateInstance.html"]{@litchar{vkCreateInstance}}
-is available as a procedure called @litchar{vkCreateInstance}. The unsafe variants are the same, but prefixed
-with an underscore.
+is available as a procedure called @litchar{vkCreateInstance}.
