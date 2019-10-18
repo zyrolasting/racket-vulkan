@@ -472,10 +472,11 @@
                        0
                        (abs (string->number (car sub-op/match)))))
 
-    `(- (integer-bytes->integer (make-bytes (if ,(string-contains? literal "LL")
-                                                8
-                                                (/ (system-type 'word) 8)) 255)
-                                ,(string-contains? literal "U"))
+    `(- (integer-bytes->integer
+         (make-bytes
+          (ctype-sizeof ,(if (string-contains? literal "LL") '_llong '_long))
+          255)
+         ,(string-contains? literal "U"))
         ,sub-op))
 
   (define (c-numeric-lit->number c-num-lit-string)
