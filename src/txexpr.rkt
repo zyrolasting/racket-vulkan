@@ -37,6 +37,9 @@
 (define (find-first-by-tag t tx)
   (findf-txexpr tx (λ (x) (tag=? t x))))
 
+(define (get-tagged-children tx)
+  (filter txexpr? (get-elements tx)))
+
 (define (shrink-wrap-cdata x)
   (string-trim (string-join (filter string? (get-elements x)) "")))
 

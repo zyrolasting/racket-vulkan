@@ -35,7 +35,8 @@
     (displayln "#lang racket/base")
     (displayln "(provide (all-defined-out))")
     (displayln "(require ffi/unsafe ffi/unsafe/define)")
-    (displayln "(define-ffi-definer define-vulkan (ffi-lib \"libvulkan\"))")
+    (displayln "(define-ffi-definer define-vulkan (ffi-lib \"libvulkan\")")
+    (displayln "  #:default-make-fail make-not-available)")
     (for ([sig signatures])
       (writeln sig))))
 
@@ -60,7 +61,7 @@
                                                    " "
                                                    (name "VkDeviceAddress")
                                                    ";"))
-               '(define _VkDeviceAddress _uint64_t)))
+               '(define VkDeviceAddress uint64_t)))
 
 
 ;; -------------------------------------------------------------
@@ -69,13 +70,13 @@
 
 (define (generate-symdecl-signature type-xexpr [registry #f])
   (define name (get-type-name type-xexpr))
-  `(define ,(cname name) ',(string->symbol name)))
+  `(define ,(cname name) ',(cname name)))
 
 (module+ test
   (test-equal? "(generate-symdecl-signature)"
                (generate-symdecl-signature '(type ((category "symdecl")
                                                    (name "VkDeviceAddress"))))
-               '(define _VkDeviceAddress 'VkDeviceAddress)))
+               '(define VkDeviceAddress 'VkDeviceAddress)))
 
 
 ;; ------------------------------------------------------------------
@@ -99,7 +100,19 @@
   (define racket-id (cname registry-type-name))
 
   (define name=>existing
-    #hash(("char" . "sbyte")))
+    #hash(("char"      . "_sbyte")
+          ("void"      . "_void")
+          ("uint32_t"  . "_uint32")
+          ("float"     . "_float")
+          ("double"    . "_double")
+          ("uint8_t"   . "_uint8")
+          ("uint16_t"  . "_uint16")
+          ("uint32_t"  . "_uint32")
+          ("uint64_t"  . "_uint64")
+          ("int32_t"   . "_int32")
+          ("int64_t"   . "_int64")
+          ("size_t"    . "_size")))
+
 
   (define type-id
    (if (hash-has-key? name=>existing registry-type-name)
@@ -118,7 +131,7 @@
                '(define _void _void))
   (test-equal? "Generate ctype signature with _t"
                (generate-ctype-signature '(type ((category "ctype") (name "uint32_t"))))
-               '(define _uint32_t _uint32)))
+               '(define uint32_t _uint32)))
 
 
 ;; ------------------------------------------------
@@ -156,10 +169,10 @@
                    "[4]")))
     (test-equal? "(generate-union-signature)"
                  (generate-union-signature example-union-xexpr)
-                 '(define _VkClearColorValue
-                    (_union (_list-struct _float _float _float _float)
-                            (_list-struct _int32_t _int32_t _int32_t _int32_t)
-                            (_list-struct _uint32_t _uint32_t _uint32_t _uint32_t)))))
+                 '(define VkClearColorValue
+                    (_union (_list-struct float float float float)
+                            (_list-struct int32_t int32_t int32_t int32_t)
+                            (_list-struct uint32_t uint32_t uint32_t uint32_t)))))
 
 
 ;; ------------------------------------------------
@@ -176,7 +189,7 @@
                                           undecorated-type)
                                       characters))
 
-    `(,(string->symbol name) ,type))
+    `(,(cname name) ,type))
 
   `(define-cstruct ,(cname struct-name)
      . (,(map generate-member-signature
@@ -246,17 +259,17 @@
 
     (test-equal? "(generate-struct-signature)"
                  (generate-struct-signature example-struct-xexpr)
-                 `(define-cstruct _VkDeviceCreateInfo
-                    ((sType _VkStructureType)
+                 `(define-cstruct VkDeviceCreateInfo
+                    ((sType VkStructureType)
                      (pNext (_cpointer _void))
-                     (flags _VkDeviceCreateFlags)
-                     (queueCreateInfoCount _uint32_t)
-                     (pQueueCreateInfos (_cpointer _VkDeviceQueueCreateInfo))
-                     (enabledLayerCount _uint32_t)
-                     (ppEnabledLayerNames (_cpointer (_cpointer _char)))
-                     (enabledExtensionCount _uint32_t)
-                     (ppEnabledExtensionNames (_cpointer (_cpointer _char)))
-                     (pEnabledFeatures (_cpointer _VkPhysicalDeviceFeatures)))))
+                     (flags VkDeviceCreateFlags)
+                     (queueCreateInfoCount uint32_t)
+                     (pQueueCreateInfos (_cpointer VkDeviceQueueCreateInfo))
+                     (enabledLayerCount uint32_t)
+                     (ppEnabledLayerNames (_cpointer (_cpointer char)))
+                     (enabledExtensionCount uint32_t)
+                     (ppEnabledExtensionNames (_cpointer (_cpointer char)))
+                     (pEnabledFeatures (_cpointer VkPhysicalDeviceFeatures)))))
 
 
     (test-equal? "(generate-struct-signature): circular"
@@ -264,7 +277,7 @@
                   '(type ((category "struct")
                           (name "C"))
                          (member (type "C") "* " (name "pNext"))))
-                 `(define-cstruct _C
+                 `(define-cstruct C
                     ((pNext (_cpointer _void))))))
 
 ;; ------------------------------------------------------------------
@@ -273,13 +286,13 @@
 
 (define (generate-handle-signature handle-xexpr [registry #f])
   (define name (get-type-name handle-xexpr))
-  `(define ,(cname name) (_cpointer ',(string->symbol (string-append name "_T")))))
+  `(define ,(cname name) (_cpointer ',(cname (string-append name "_T")))))
 
 (module+ test
   (test-equal? "(generate-handle-signature)"
                (generate-handle-signature '(type ((category "handle"))
                                                  "MAKE_HANDLE(" (name "VkDevice") ")"))
-               '(define _VkDevice (_cpointer 'VkDevice_T))))
+               '(define VkDevice (_cpointer 'VkDevice_T))))
 
 
 ;; ------------------------------------------------------------------
@@ -346,7 +359,7 @@
           ; The ctype declaration assumes a list of form (name0 = val0 name1 = val1 ...)
           (define w/value (cons (cdr enumerant) decls))
           (define w/= (cons '= w/value))
-          (define w/all (cons (string->symbol (car enumerant)) w/=))
+          (define w/all (cons (cname (car enumerant)) w/=))
           w/all))))
 
 (module+ test
@@ -371,7 +384,7 @@
     (check-equal?
      (generate-enum-signature '(type ((category "enum") (name "VkBlendOp")))
                               enum-registry)
-     '(define _VkBlendOp
+     '(define VkBlendOp
         (_enum '(VK_BLEND_OP_ADD = 0
                  VK_SHIMMED = 1
                  VK_BLEND_OP_SUBTRACT = 1
@@ -381,12 +394,12 @@
     (check-equal?
      (generate-enum-signature '(type ((category "enum") (name "NotPresent")))
                               enum-registry)
-     '(define _NotPresent (_enum '())))
+     '(define NotPresent (_enum '())))
 
     (check-equal?
      (generate-enum-signature '(type ((category "enum") (name "VkShaderStageFlagBits")))
                               enum-registry)
-     '(define _VkShaderStageFlagBits
+     '(define VkShaderStageFlagBits
         (_bitmask '(VK_SHADER_STAGE_VERTEX_BIT = 0
                     VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT = 1
                     VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT = 2
@@ -447,17 +460,17 @@
                         (enum ((value "256") (name "D")))
                         (enum ((name "E") (alias "C")))))
                '(begin
-                  (define _A
+                  (define A
                     (- (integer-bytes->integer (make-bytes (if #f 8 (/ (system-type 'word) 8)) 255) #t)
                        0))
-                  (define _B
+                  (define B
                     (- (integer-bytes->integer (make-bytes (if #t 8 (/ (system-type 'word) 8)) 255) #t)
                        2))
-                  (define _C
+                  (define C
                     (- (integer-bytes->integer (make-bytes (if #f 8 (/ (system-type 'word) 8)) 255) #f)
                        0))
-                  (define _D 256)
-                  (define _E _C))))
+                  (define D 256)
+                  (define E C))))
 
 
 ;; ------------------------------------------------------------------
@@ -480,7 +493,7 @@
                                                   (type "VkFlags")
                                                   " "
                                                   (name "VkFramebufferCreateFlags")))
-               '(define _VkFramebufferCreateFlags _VkFlags)))
+               '(define VkFramebufferCreateFlags VkFlags)))
 
 
 ;; ------------------------------------------------------------------
@@ -528,12 +541,66 @@
                        (type "size_t") "size,"
                        (type "size_t") "alignment,"
                        (type "VkSystemAllocationScope") "allocationScope);"))
-                '(define _PFN_vkAllocationFunction (_cpointer (_fun (_cpointer _void)
-                                                                    _size_t
-                                                                    _size_t
-                                                                    _VkSystemAllocationScope
+                '(define PFN_vkAllocationFunction (_cpointer (_fun (_cpointer _void)
+                                                                    size_t
+                                                                    size_t
+                                                                    VkSystemAllocationScope
                                                                     ->
                                                                     (_cpointer _void))))))
+
+
+;; ------------------------------------------------------------------
+;; All that stuff above was just the data. Now let's talk functions.
+
+(define (generate-command-signature command-xexpr [registry #f])
+  (define children (filter (λ (x) (and (txexpr? x)
+                                       (member (get-tag x) '(param proto))))
+                           (get-elements command-xexpr)))
+  (define (find/text t tx)
+    (shrink-wrap-cdata (find-first-by-tag t tx)))
+
+  ; <proto> always comes first.
+  ; https://www.khronos.org/registry/vulkan/specs/1.1/registry.html#_contents_of_command_tags
+  (define proto (car children))
+  (define id (cname (find/text 'name proto)))
+  (define undecorated-return (find/text 'type proto))
+  (define characters (string->list (shrink-wrap-cdata proto)))
+  (define ret (infer-pointer-depth undecorated-return
+                                   characters))
+
+  (define param-elements (cdr children))
+  (define params (map (λ (x)
+                        (infer-pointer-depth (find/text 'type x)
+                                             (string->list (shrink-wrap-cdata x))))
+                      param-elements))
+
+  `(define-vulkan ,id (_fun ,@params -> ,ret)))
+
+
+(module+ test
+  (test-equal? "(generate-command-signature)"
+               (generate-command-signature
+                '(command
+                  (proto (type "VkResult") " " (name "vkCreateInstance"))
+                  (param "const "
+                         (type "VkInstanceCreateInfo")
+                         "* "
+                         (name "pCreateInfo"))
+                  (param ((optional "true"))
+                         "const "
+                         (type "VkAllocationCallbacks")
+                         "* "
+                         (name "pAllocator"))
+                  (param (type "VkInstance")
+                         "* "
+                         (name "pInstance"))))
+               '(define-vulkan vkCreateInstance
+                  (_fun (_cpointer VkInstanceCreateInfo)
+                        (_cpointer VkAllocationCallbacks)
+                        (_cpointer VkInstance)
+                        ->
+                        VkResult))))
+
 
 ;; ------------------------------------------------------------------
 ;; It all comes down to this, the entry point that returns a list of
@@ -542,6 +609,10 @@
 (define (generate-vulkan-bindings registry)
   (define ordered (curate-registry registry))
 
+  ; To be clear, this is a superset of the category attribute values
+  ; you'd expect to find in the Vulkan registry. (curate-registry)
+  ; introduced a few of its own, and they are not restricted to
+  ; <type> elements.
   (define category=>proc
     `#hash(("ctype"       . ,generate-ctype-signature)
            ("consts"      . ,generate-consts-signature)
@@ -553,7 +624,8 @@
            ("bitmask"     . ,generate-bitmask-signature)
            ("funcpointer" . ,generate-funcpointer-signature)
            ("struct"      . ,generate-struct-signature)
-           ("union"       . ,generate-union-signature)))
+           ("union"       . ,generate-union-signature)
+           ("command"     . ,generate-command-signature)))
 
   (for/list ([type (in-list ordered)])
     (define category (attr-ref type 'category ""))

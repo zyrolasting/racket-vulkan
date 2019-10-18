@@ -42,7 +42,7 @@
   ; Don't include types that ffi/unsafe already provides.
   (define (already-in-racket? x)
     (member (cname (get-type-name x))
-            '(_void _float _double)))
+            '(_void _float _double _int)))
 
   (map (λ (x)
          (define requires (attr-ref x 'requires ""))
@@ -88,17 +88,27 @@
                         (enum ((name "x") (value "1")))
                         (enum ((name "y") (value "2")))))))
 
+;; Just toss a category on <command> elements for consistency.
+;; Keeps the logic in generate-bindings.rkt easier to think about.
+(define (categorize-commands commands-list)
+  (filter-map (λ (x)
+                (and (tag=? 'command x)
+                     (attr-set x 'category "command")))
+              commands-list))
 
 ; Return declaration elements in sorted groups.
 (define (curate-registry registry)
   (define curate-types (compose categorize-forward-declarations
                                 categorize-c-types
                                 remove-c-macros))
+
   (define curate-enums (compose categorize-enums-that-arent))
+  (define curate-commands (compose categorize-commands))
 
   (define curated-declarations
-    (append (curate-types (find-all-by-tag 'type registry))
-            (curate-enums (find-all-by-tag 'enums registry))))
+    (append (curate-types (get-tagged-children (find-first-by-tag 'types registry)))
+            (curate-enums (find-all-by-tag 'enums registry))
+            (curate-commands (get-tagged-children (find-first-by-tag 'commands registry)))))
 
   (apply append
          (map (λ (c) (get-types-by-category c curated-declarations))
@@ -113,4 +123,5 @@
            "bitmask"
            "struct"
            "union"
-           "funcpointer"))))
+           "funcpointer"
+           "command"))))
