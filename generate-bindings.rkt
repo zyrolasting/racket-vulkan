@@ -20,10 +20,10 @@
 
 (require racket/list
          racket/string
-         "./c-analysis.rkt"                 ; For building predicates on C text.
+         "./src/c-analysis.rkt"             ; For building predicates on C text.
          "./vulkan-spec.rkt"                ; For sourcing VulkanAPI spec
-         "./txexpr.rkt"                     ; For element analyis
-         "./curation.rkt"                   ; For making the registry easier to process.
+         "./src/txexpr.rkt"                 ; For element analyis
+         "./src/curation.rkt"               ; For making the registry easier to process.
          (rename-in ffi/unsafe [-> ffi->])) ; For Racket<>C type declarations
 
 (module+ test
