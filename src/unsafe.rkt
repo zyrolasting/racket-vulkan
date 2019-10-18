@@ -1,8 +1,8 @@
 #lang racket/base
 (provide (all-defined-out))
 (require ffi/unsafe ffi/unsafe/define)
-(define-ffi-definer define-vulkan (ffi-lib "libvulkan")
-  #:default-make-fail make-not-available)
+(define libname (case (system-type (quote os)) ((windows) "vulkan") (else "libvulkan")))
+(define-ffi-definer define-vulkan (ffi-lib libname) #:default-make-fail make-not-available)
 (define VisualID _ulong)
 (define Window _ulong)
 (define RROutput _ulong)
