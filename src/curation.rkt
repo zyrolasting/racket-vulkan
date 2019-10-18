@@ -1,11 +1,7 @@
 #lang racket/base
 
 ;; -------------------------------------------------------------------
-;; This module is responsible for curating the xexpr representation of
-;; the Vulkan Registry into a new xexpr that's easier to process.
-;; Specifically, I cannibalize the "category" attribute from the
-;; <type> element and apply it in more ways to remove ambiguities,
-;; and remove/restructure data to make them more useable.
+;; This module makes the Vulkan Registry easier to process.
 
 (provide (all-defined-out))
 
