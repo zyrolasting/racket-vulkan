@@ -505,13 +505,13 @@
                         (enum ((name "E") (alias "C")))))
                '(begin
                   (define A
-                    (- (integer-bytes->integer (make-bytes (if #f 8 (/ (system-type 'word) 8)) 255) #t)
+                    (- (integer-bytes->integer (make-bytes (ctype-sizeof _long) 255) #t)
                        0))
                   (define B
-                    (- (integer-bytes->integer (make-bytes (if #t 8 (/ (system-type 'word) 8)) 255) #t)
+                    (- (integer-bytes->integer (make-bytes (ctype-sizeof _llong) 255) #t)
                        2))
                   (define C
-                    (- (integer-bytes->integer (make-bytes (if #f 8 (/ (system-type 'word) 8)) 255) #f)
+                    (- (integer-bytes->integer (make-bytes (ctype-sizeof _long) 255) #f)
                        0))
                   (define D 256)
                   (define E C))))
