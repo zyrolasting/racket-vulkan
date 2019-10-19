@@ -1,6 +1,6 @@
 #lang info
 (define collection "vulkan")
-(define deps '("base" "txexpr"))
+(define deps '("base" "txexpr" "graph-lib"))
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))
 (define scribblings '(("scribblings/vulkan.scrbl" ())))
 (define pkg-desc "Vulkan integration for Racket")
