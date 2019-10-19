@@ -31,40 +31,40 @@
 
 (define platform-bindings
   ; X + Xrandr
-  '((define VisualID _ulong)
-    (define Window _ulong)
-    (define RROutput _ulong)
-    (define Display 'Display)
+  '((define _VisualID _ulong)
+    (define _Window _ulong)
+    (define _RROutput _ulong)
+    (define _Display 'Display)
 
     ; Wayland
-    (define wl_display 'wl_display)
-    (define wl_surface 'wl_surface)
+    (define _wl_display 'wl_display)
+    (define _wl_surface 'wl_surface)
 
     ; Windows
     ; http://web.archive.org/web/20190911051224/https://docs.microsoft.com/en-us/windows/win32/winprog/windows-data-types
-    (define HANDLE (_cpointer _void))
-    (define HINSTANCE HANDLE)
-    (define HWND HANDLE)
-    (define HMONITOR HANDLE)
-    (define DWORD _ulong)
-    (define LPCWSTR (_cpointer _wchar))
-    (define SECURITY_ATTRIBUTES 'SECURITY_ATTRIBUTES)
+    (define _HANDLE (_cpointer _void))
+    (define _HINSTANCE _HANDLE)
+    (define _HWND _HANDLE)
+    (define _HMONITOR _HANDLE)
+    (define _DWORD _ulong)
+    (define _LPCWSTR (_cpointer _wchar))
+    (define _SECURITY_ATTRIBUTES 'SECURITY_ATTRIBUTES)
 
     ; XCB
     ; https://code.woboq.org/qt5/include/xcb/xproto.h.html
-    (define xcb_visualid_t _uint32)
-    (define xcb_window_t _uint32)
-    (define xcb_connection_t 'xcb_connection_t)
+    (define _xcb_visualid_t _uint32)
+    (define _xcb_window_t _uint32)
+    (define _xcb_connection_t 'xcb_connection_t)
 
     ; Zircon (Fuchsia OS)
     ; https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/public/zircon/types.h
-    (define zx_handle_t _uint32)
+    (define _zx_handle_t _uint32)
 
     ; These are apparently behind an NDA. Even if I knew what these were,
     ; I couldn't put them here.
     ; https://github.com/KhronosGroup/Vulkan-Docs/issues/1000
-    (define GgpStreamDescriptor (_cpointer _void))
-    (define GgpFrameToken (_cpointer _void))
+    (define _GgpStreamDescriptor (_cpointer _void))
+    (define _GgpFrameToken (_cpointer _void))
 
     (define (VK_MAKE_VERSION major minor patch)
       (bitwise-ior (arithmetic-shift major 22)
@@ -111,7 +111,7 @@
                                                    " "
                                                    (name "VkDeviceAddress")
                                                    ";"))
-               '(define VkDeviceAddress uint64_t)))
+               '(define _VkDeviceAddress _uint64_t)))
 
 
 ;; -------------------------------------------------------------
@@ -120,13 +120,13 @@
 
 (define (generate-symdecl-signature type-xexpr [registry #f])
   (define name (get-type-name type-xexpr))
-  `(define ,(cname name) ',(cname name)))
+  `(define ,(cname name) ',(string->symbol name)))
 
 (module+ test
   (test-equal? "(generate-symdecl-signature)"
                (generate-symdecl-signature '(type ((category "symdecl")
                                                    (name "VkDeviceAddress"))))
-               '(define VkDeviceAddress 'VkDeviceAddress)))
+               '(define _VkDeviceAddress 'VkDeviceAddress)))
 
 
 ;; ------------------------------------------------------------------
@@ -150,18 +150,18 @@
   (define racket-id (cname registry-type-name))
 
   (define name=>existing
-    #hash(("char"      . "_sbyte")
-          ("void"      . "_void")
-          ("uint32_t"  . "_uint32")
-          ("float"     . "_float")
-          ("double"    . "_double")
-          ("uint8_t"   . "_uint8")
-          ("uint16_t"  . "_uint16")
-          ("uint32_t"  . "_uint32")
-          ("uint64_t"  . "_uint64")
-          ("int32_t"   . "_int32")
-          ("int64_t"   . "_int64")
-          ("size_t"    . "_size")))
+    #hash(("char"      . "sbyte")
+          ("void"      . "void")
+          ("uint32_t"  . "uint32")
+          ("float"     . "float")
+          ("double"    . "double")
+          ("uint8_t"   . "uint8")
+          ("uint16_t"  . "uint16")
+          ("uint32_t"  . "uint32")
+          ("uint64_t"  . "uint64")
+          ("int32_t"   . "int32")
+          ("int64_t"   . "int64")
+          ("size_t"    . "size")))
 
 
   (define type-id
@@ -181,7 +181,7 @@
                '(define _void _void))
   (test-equal? "Generate ctype signature with _t"
                (generate-ctype-signature '(type ((category "ctype") (name "uint32_t"))))
-               '(define uint32_t _uint32)))
+               '(define _uint32_t _uint32)))
 
 
 ;; ------------------------------------------------
@@ -219,10 +219,10 @@
                    "[4]")))
     (test-equal? "(generate-union-signature)"
                  (generate-union-signature example-union-xexpr)
-                 '(define VkClearColorValue
-                    (_union (_list-struct float float float float)
-                            (_list-struct int32_t int32_t int32_t int32_t)
-                            (_list-struct uint32_t uint32_t uint32_t uint32_t)))))
+                 '(define _VkClearColorValue
+                    (_union (_list-struct _float _float _float _float)
+                            (_list-struct _int32_t _int32_t _int32_t _int32_t)
+                            (_list-struct _uint32_t _uint32_t _uint32_t _uint32_t)))))
 
 
 ;; ------------------------------------------------
@@ -239,7 +239,7 @@
                                           undecorated-type)
                                       characters))
 
-    `(,(cname name) ,type))
+    `(,(string->symbol name) ,type))
 
   `(define-cstruct ,(cname struct-name)
      . (,(map generate-member-signature
@@ -309,17 +309,17 @@
 
     (test-equal? "(generate-struct-signature)"
                  (generate-struct-signature example-struct-xexpr)
-                 `(define-cstruct VkDeviceCreateInfo
-                    ((sType VkStructureType)
+                 `(define-cstruct _VkDeviceCreateInfo
+                    ((sType _VkStructureType)
                      (pNext (_cpointer _void))
-                     (flags VkDeviceCreateFlags)
-                     (queueCreateInfoCount uint32_t)
-                     (pQueueCreateInfos (_cpointer VkDeviceQueueCreateInfo))
-                     (enabledLayerCount uint32_t)
-                     (ppEnabledLayerNames (_cpointer (_cpointer char)))
-                     (enabledExtensionCount uint32_t)
-                     (ppEnabledExtensionNames (_cpointer (_cpointer char)))
-                     (pEnabledFeatures (_cpointer VkPhysicalDeviceFeatures)))))
+                     (flags _VkDeviceCreateFlags)
+                     (queueCreateInfoCount _uint32_t)
+                     (pQueueCreateInfos (_cpointer _VkDeviceQueueCreateInfo))
+                     (enabledLayerCount _uint32_t)
+                     (ppEnabledLayerNames (_cpointer (_cpointer _char)))
+                     (enabledExtensionCount _uint32_t)
+                     (ppEnabledExtensionNames (_cpointer (_cpointer _char)))
+                     (pEnabledFeatures (_cpointer _VkPhysicalDeviceFeatures)))))
 
 
     (test-equal? "(generate-struct-signature): circular"
@@ -327,8 +327,13 @@
                   '(type ((category "struct")
                           (name "C"))
                          (member (type "C") "* " (name "pNext"))))
-                 `(define-cstruct C
+                 `(define-cstruct _C
                     ((pNext (_cpointer _void))))))
+
+(define (generate-custom-type-signature x r)
+  (if (equal? (attr-ref x 'original-category) "struct")
+      (generate-struct-signature x r)
+      (generate-union-signature x r)))
 
 ;; ------------------------------------------------------------------
 ;; Handles are just pointers to forward-declared structs with private
@@ -336,13 +341,13 @@
 
 (define (generate-handle-signature handle-xexpr [registry #f])
   (define name (get-type-name handle-xexpr))
-  `(define ,(cname name) (_cpointer ',(cname (string-append name "_T")))))
+  `(define ,(cname name) (_cpointer ',(string->symbol (string-append name "_T")))))
 
 (module+ test
   (test-equal? "(generate-handle-signature)"
                (generate-handle-signature '(type ((category "handle"))
                                                  "MAKE_HANDLE(" (name "VkDevice") ")"))
-               '(define VkDevice (_cpointer 'VkDevice_T))))
+               '(define _VkDevice (_cpointer 'VkDevice_T))))
 
 
 ;; ------------------------------------------------------------------
@@ -409,7 +414,7 @@
           ; The ctype declaration assumes a list of form (name0 = val0 name1 = val1 ...)
           (define w/value (cons (cdr enumerant) decls))
           (define w/= (cons '= w/value))
-          (define w/all (cons (cname (car enumerant)) w/=))
+          (define w/all (cons (string->symbol (car enumerant)) w/=))
           w/all))))
 
 (module+ test
@@ -434,7 +439,7 @@
     (check-equal?
      (generate-enum-signature '(type ((category "enum") (name "VkBlendOp")))
                               enum-registry)
-     '(define VkBlendOp
+     '(define _VkBlendOp
         (_enum '(VK_BLEND_OP_ADD = 0
                  VK_SHIMMED = 1
                  VK_BLEND_OP_SUBTRACT = 1
@@ -444,12 +449,12 @@
     (check-equal?
      (generate-enum-signature '(type ((category "enum") (name "NotPresent")))
                               enum-registry)
-     '(define NotPresent (_enum '())))
+     '(define _NotPresent (_enum '())))
 
     (check-equal?
      (generate-enum-signature '(type ((category "enum") (name "VkShaderStageFlagBits")))
                               enum-registry)
-     '(define VkShaderStageFlagBits
+     '(define _VkShaderStageFlagBits
         (_bitmask '(VK_SHADER_STAGE_VERTEX_BIT = 0
                     VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT = 1
                     VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT = 2
@@ -511,17 +516,17 @@
                         (enum ((value "256") (name "D")))
                         (enum ((name "E") (alias "C")))))
                '(begin
-                  (define A
+                  (define _A
                     (- (integer-bytes->integer (make-bytes (ctype-sizeof _long) 255) #t)
                        0))
-                  (define B
+                  (define _B
                     (- (integer-bytes->integer (make-bytes (ctype-sizeof _llong) 255) #t)
                        2))
-                  (define C
+                  (define _C
                     (- (integer-bytes->integer (make-bytes (ctype-sizeof _long) 255) #f)
                        0))
-                  (define D 256)
-                  (define E C))))
+                  (define _D 256)
+                  (define _E _C))))
 
 
 ;; ------------------------------------------------------------------
@@ -544,7 +549,7 @@
                                                   (type "VkFlags")
                                                   " "
                                                   (name "VkFramebufferCreateFlags")))
-               '(define VkFramebufferCreateFlags VkFlags)))
+               '(define _VkFramebufferCreateFlags _VkFlags)))
 
 
 ;; ------------------------------------------------------------------
@@ -592,10 +597,10 @@
                        (type "size_t") "size,"
                        (type "size_t") "alignment,"
                        (type "VkSystemAllocationScope") "allocationScope);"))
-                '(define PFN_vkAllocationFunction (_cpointer (_fun (_cpointer _void)
-                                                                    size_t
-                                                                    size_t
-                                                                    VkSystemAllocationScope
+                '(define _PFN_vkAllocationFunction (_cpointer (_fun (_cpointer _void)
+                                                                    _size_t
+                                                                    _size_t
+                                                                    _VkSystemAllocationScope
                                                                     ->
                                                                     (_cpointer _void))))))
 
@@ -613,7 +618,7 @@
   ; <proto> always comes first.
   ; https://www.khronos.org/registry/vulkan/specs/1.1/registry.html#_contents_of_command_tags
   (define proto (car children))
-  (define id (cname (find/text 'name proto)))
+  (define id (string->symbol (find/text 'name proto)))
   (define undecorated-return (find/text 'type proto))
   (define characters (string->list (shrink-wrap-cdata proto)))
   (define ret (infer-pointer-depth undecorated-return
@@ -646,11 +651,11 @@
                          "* "
                          (name "pInstance"))))
                '(define-vulkan vkCreateInstance
-                  (_fun (_cpointer VkInstanceCreateInfo)
-                        (_cpointer VkAllocationCallbacks)
-                        (_cpointer VkInstance)
+                  (_fun (_cpointer _VkInstanceCreateInfo)
+                        (_cpointer _VkAllocationCallbacks)
+                        (_cpointer _VkInstance)
                         ->
-                        VkResult))))
+                        _VkResult))))
 
 
 ;; ------------------------------------------------------------------
@@ -682,7 +687,8 @@
     (define category (attr-ref type 'category ""))
     (define alias (attr-ref type 'alias #f))
     (if alias
-        `(define ,(cname (get-type-name type)) ,(cname alias))
+        (let ([namer (if (tag=? 'command type) string->symbol cname)])
+          `(define ,(namer (get-type-name type)) ,(namer alias)))
         ((hash-ref category=>proc category) type registry))))
 
 

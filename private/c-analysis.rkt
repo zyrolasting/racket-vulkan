@@ -9,10 +9,7 @@
          racket/string)
 
 (define (cname str)
-  (define sym (string->symbol str))
-  (if (member sym '(void int))
-      (string->symbol (string-append "_" str))
-      sym))
+  (string->symbol (string-append "_" str)))
 
 (define (cnamef fmt-string . args)
   (cname (apply format fmt-string args)))
