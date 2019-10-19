@@ -47,6 +47,9 @@
 (define (shrink-wrap-cdata x)
   (string-trim (string-join (filter string? (get-elements x)) "")))
 
+(define (get-text-in-tagged-child t tx)
+  (shrink-wrap-cdata (find-first-by-tag t tx)))
+
 (define (get-all-cdata x)
   (foldl (λ (kid str)
            (string-append str
@@ -82,7 +85,7 @@
 
 (define collect-enums
   (simple-memo (λ (registry)
-                  (find-all-by-tag 'enums registry))))
+                 (find-all-by-tag 'enums registry))))
 
 (define collect-named-enums
   (simple-memo (λ (registry)

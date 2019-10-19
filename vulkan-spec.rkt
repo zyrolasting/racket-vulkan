@@ -4,7 +4,9 @@
 ;---------------------------------------------------------------------------------------------------
 ; This module offers the Vulkan API specification in machine-readable form.
 
-(require xml racket/contract)
+(require xml
+         racket/contract
+         racket/runtime-path)
 
 (provide
   (contract-out
@@ -16,7 +18,8 @@
 (define sources/c (symbols 'local 'remote))
 
 ; What 'local implies
-(define local-mirror-path "vk.xml")
+(define-runtime-path registry-dir ".")
+(define local-mirror-path (build-path registry-dir "vk.xml"))
 
 ; Run this script directly to see Vulkan spec xexpr on (current-output-port)
 (module+ main (displayln (get-vulkan-spec)))
