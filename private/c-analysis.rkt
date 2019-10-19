@@ -23,4 +23,4 @@
   ; Wrap pointer declarations equal to the number of '*'s
   (for/fold ([sig (cname undecorated-type)])
             ([i (in-range pointer-depth)])
-    `(_cpointer ,sig)))
+    `(_cpointer/null ,sig)))

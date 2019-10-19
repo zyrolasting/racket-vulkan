@@ -583,7 +583,7 @@
   (define return-type (infer-pointer-depth undecorated-return-type
                                            (string->list return-signature)))
 
-  `(define ,(cname name) (_cpointer
+  `(define ,(cname name) (_cpointer/null
                           (_fun ,@parameter-types
                                 ->
                                 ,return-type))))
