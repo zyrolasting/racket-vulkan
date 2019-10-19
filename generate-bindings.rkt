@@ -311,15 +311,15 @@
                  (generate-struct-signature example-struct-xexpr)
                  `(define-cstruct _VkDeviceCreateInfo
                     ((sType _VkStructureType)
-                     (pNext (_cpointer _void))
+                     (pNext (_cpointer/null _void))
                      (flags _VkDeviceCreateFlags)
                      (queueCreateInfoCount _uint32_t)
-                     (pQueueCreateInfos (_cpointer _VkDeviceQueueCreateInfo))
+                     (pQueueCreateInfos (_cpointer/null _VkDeviceQueueCreateInfo))
                      (enabledLayerCount _uint32_t)
-                     (ppEnabledLayerNames (_cpointer (_cpointer _char)))
+                     (ppEnabledLayerNames (_cpointer/null _bytes/nul-terminated))
                      (enabledExtensionCount _uint32_t)
-                     (ppEnabledExtensionNames (_cpointer (_cpointer _char)))
-                     (pEnabledFeatures (_cpointer _VkPhysicalDeviceFeatures)))))
+                     (ppEnabledExtensionNames (_cpointer/null _bytes/nul-terminated))
+                     (pEnabledFeatures (_cpointer/null _VkPhysicalDeviceFeatures)))))
 
 
     (test-equal? "(generate-struct-signature): circular"
@@ -328,7 +328,7 @@
                           (name "C"))
                          (member (type "C") "* " (name "pNext"))))
                  `(define-cstruct _C
-                    ((pNext (_cpointer _void))))))
+                    ((pNext (_cpointer/null _void))))))
 
 (define (generate-custom-type-signature x r)
   (if (equal? (attr-ref x 'original-category) "struct")
@@ -597,12 +597,12 @@
                        (type "size_t") "size,"
                        (type "size_t") "alignment,"
                        (type "VkSystemAllocationScope") "allocationScope);"))
-                '(define _PFN_vkAllocationFunction (_cpointer (_fun (_cpointer _void)
-                                                                    _size_t
-                                                                    _size_t
-                                                                    _VkSystemAllocationScope
-                                                                    ->
-                                                                    (_cpointer _void))))))
+               '(define _PFN_vkAllocationFunction (_cpointer/null (_fun (_cpointer/null _void)
+                                                                        _size_t
+                                                                        _size_t
+                                                                        _VkSystemAllocationScope
+                                                                        ->
+                                                                        (_cpointer/null _void))))))
 
 
 ;; ------------------------------------------------------------------
@@ -651,9 +651,9 @@
                          "* "
                          (name "pInstance"))))
                '(define-vulkan vkCreateInstance
-                  (_fun (_cpointer _VkInstanceCreateInfo)
-                        (_cpointer _VkAllocationCallbacks)
-                        (_cpointer _VkInstance)
+                  (_fun (_cpointer/null _VkInstanceCreateInfo)
+                        (_cpointer/null _VkAllocationCallbacks)
+                        (_cpointer/null _VkInstance)
                         ->
                         _VkResult))))
 
