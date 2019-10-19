@@ -31,6 +31,10 @@
   (and (txexpr? tx)
        (equal? (get-tag tx) t)))
 
+(define (category=? c tx)
+  (and (txexpr? tx)
+       (equal? (attr-ref tx 'category #f) c)))
+
 (define (find-all-by-tag t tx)
   (findf*-txexpr tx (λ (x) (tag=? t x))))
 
