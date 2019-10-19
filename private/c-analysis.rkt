@@ -17,7 +17,7 @@
 (define (cnamef fmt-string . args)
   (cname (apply format fmt-string args)))
 
-(define (infer-pointer-depth undecorated-type characters)
+(define (infer-pointer-type undecorated-type characters)
   (define pointer-depth
     (count (λ (ch) (or (char=? #\* ch)
                        (char=? #\[ ch))) ; TODO: Should this be wrapped as an array type?
@@ -33,16 +33,16 @@
 
 (module+ test
   (test-equal? "No pointers"
-               (infer-pointer-depth "char" '())
+               (infer-pointer-type "char" '())
                '_char)
   (test-equal? "Depth = 1"
-               (infer-pointer-depth "void" '(#\1 #\* #\f))
+               (infer-pointer-type "void" '(#\1 #\* #\f))
                '(_cpointer/null _void))
   (test-equal? "Depth = 2, mixed chars"
-               (infer-pointer-depth "int" '(#\1 #\* #\[))
+               (infer-pointer-type "int" '(#\1 #\* #\[))
                '(_cpointer/null (_cpointer/null _int)))
   (test-case "Special case: char*"
-    (check-equal? (infer-pointer-depth "char" '(#\*))
+    (check-equal? (infer-pointer-type "char" '(#\*))
                   '_bytes/nul-terminated)
-    (check-equal? (infer-pointer-depth "char" '(#\* #\*))
+    (check-equal? (infer-pointer-type "char" '(#\* #\*))
                  '(_cpointer/null _bytes/nul-terminated))))

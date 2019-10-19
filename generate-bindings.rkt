@@ -234,7 +234,7 @@
     (define name (snatch-cdata 'name member-xexpr))
     (define undecorated-type (snatch-cdata 'type member-xexpr))
     (define characters (string->list (shrink-wrap-cdata member-xexpr)))
-    (define type (infer-pointer-depth (if (equal? undecorated-type struct-name)
+    (define type (infer-pointer-type (if (equal? undecorated-type struct-name)
                                           "void"
                                           undecorated-type)
                                       characters))
@@ -572,7 +572,7 @@
                               parameter-type-elements))
 
   (define parameter-types (map (λ (type-xexpr decl)
-                                 (infer-pointer-depth (shrink-wrap-cdata type-xexpr)
+                                 (infer-pointer-type (shrink-wrap-cdata type-xexpr)
                                                       (string->list decl)))
                                parameter-type-elements
                                adjacent-cdata))
@@ -580,7 +580,7 @@
   ; Deduce the return type
   (define return-signature (cadr (regexp-match #px"typedef ([^\\(]+)" text-signature)))
   (define undecorated-return-type (regexp-replace* #px"[\\s\\*\\[\\]]" return-signature ""))
-  (define return-type (infer-pointer-depth undecorated-return-type
+  (define return-type (infer-pointer-type undecorated-return-type
                                            (string->list return-signature)))
 
   `(define ,(cname name) (_cpointer/null
@@ -621,12 +621,12 @@
   (define id (string->symbol (find/text 'name proto)))
   (define undecorated-return (find/text 'type proto))
   (define characters (string->list (shrink-wrap-cdata proto)))
-  (define ret (infer-pointer-depth undecorated-return
+  (define ret (infer-pointer-type undecorated-return
                                    characters))
 
   (define param-elements (cdr children))
   (define params (map (λ (x)
-                        (infer-pointer-depth (find/text 'type x)
+                        (infer-pointer-type (find/text 'type x)
                                              (string->list (shrink-wrap-cdata x))))
                       param-elements))
 
