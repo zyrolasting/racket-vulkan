@@ -44,6 +44,10 @@
 (define (get-tagged-children tx)
   (filter txexpr? (get-elements tx)))
 
+(define (get-types-by-category cat types)
+  (filter (λ (x) (equal? (attr-ref x 'category "") cat))
+          types))
+
 (define (shrink-wrap-cdata x)
   (string-trim (string-join (filter string? (get-elements x)) "")))
 

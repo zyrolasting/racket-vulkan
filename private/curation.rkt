@@ -16,11 +16,6 @@
 (module+ test
   (require rackunit))
 
-
-(define (get-types-by-category cat types)
-  (filter (λ (x) (equal? (attr-ref x 'category "") cat))
-          types))
-
 ;; The "define" <type> category includes both C macros and C type
 ;; declarations. Strip out the macros to disambiguate the data. Note
 ;; that the filter predicate assumes all macros start with VK_ and are
