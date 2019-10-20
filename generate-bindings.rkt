@@ -85,7 +85,7 @@
                  (define-ffi-definer define-vulkan (ffi-lib libname)
                    #:default-make-fail make-not-available)
                  (define (check-vkResult v who)
-                   (unless (equal? v 0)
+                   (unless (equal? v 'VK_SUCCESS)
                      (error who "failed: ~a" v))))])
       (writeln sig))
     (for ([sig platform-bindings])
@@ -98,7 +98,7 @@
 ;; The "basetype" category seems to be more from the perspective
 ;; of Vulkan than C, since they appear as typedefs of C types.
 
-(define (generate-basetype-signature type-xexpr [registry #f])
+(define (generate-basetype-signature type-xexpr [registry #f] [lookup #hash()])
   (define name (get-type-name type-xexpr))
   (define original-type (shrink-wrap-cdata
                          (findf (λ (x) (tag=? 'type x))
@@ -121,7 +121,7 @@
 ;; The "symdecl" category is entirely made up by curated.rkt
 ;; to shove dangling type names to the top of the list.
 
-(define (generate-symdecl-signature type-xexpr [registry #f])
+(define (generate-symdecl-signature type-xexpr [registry #f] [lookup #hash()])
   (define name (get-type-name type-xexpr))
   `(define ,(cname name) ',(string->symbol name)))
 
@@ -148,7 +148,7 @@
 ;; that we can translate directly to identifiers provided by
 ;; ffi/unsafe.
 
-(define (generate-ctype-signature type-xexpr [registry #f])
+(define (generate-ctype-signature type-xexpr [registry #f] [lookup #hash()])
   (define registry-type-name (get-type-name type-xexpr))
   (define racket-id (cname registry-type-name))
 
@@ -201,7 +201,7 @@
                                     (λ _ ctype)))
       `(_list-struct ,ctype)))
 
-(define (generate-union-signature union-xexpr [registry #f])
+(define (generate-union-signature union-xexpr [registry #f] [lookup #hash()])
   `(define ,(cname (get-type-name union-xexpr))
      (_union
       . ,(map generate-member-signature/union
@@ -231,7 +231,7 @@
 ;; ------------------------------------------------
 ;; C structs correspond to <type category="struct">
 
-(define (generate-struct-signature struct-xexpr [registry #f])
+(define (generate-struct-signature struct-xexpr [registry #f] [lookup #hash()])
   (define struct-name (get-type-name struct-xexpr))
   (define (generate-member-signature member-xexpr)
     (define name (snatch-cdata 'name member-xexpr))
@@ -240,7 +240,8 @@
     (define type (infer-pointer-type (if (equal? undecorated-type struct-name)
                                           "void"
                                           undecorated-type)
-                                      characters))
+                                     characters
+                                     lookup))
 
     `(,(string->symbol name) ,type))
 
@@ -333,16 +334,12 @@
                  `(define-cstruct _C
                     ((pNext (_cpointer/null _void))))))
 
-(define (generate-custom-type-signature x r)
-  (if (equal? (attr-ref x 'original-category) "struct")
-      (generate-struct-signature x r)
-      (generate-union-signature x r)))
 
 ;; ------------------------------------------------------------------
 ;; Handles are just pointers to forward-declared structs with private
 ;; definitions. We use symbols to represent them on the Racket side.
 
-(define (generate-handle-signature handle-xexpr [registry #f])
+(define (generate-handle-signature handle-xexpr [registry #f] [lookup #hash()])
   (define name (get-type-name handle-xexpr))
   `(define ,(cname name) (_cpointer ',(string->symbol (string-append name "_T")))))
 
@@ -358,7 +355,7 @@
 ;; <enums> elements are a list of #defines. Others are actual C enums.
 ;; This is the case that generates actual C enums.
 
-(define (generate-enum-signature enum-xexpr registry)
+(define (generate-enum-signature enum-xexpr registry [lookup #hash()])
   (define name (get-type-name enum-xexpr))
 
   ; Empty enums are possible.
@@ -471,7 +468,7 @@
 ;; ------------------------------------------------------------------
 ;; This handles those <enums> that are not actually C enum types.
 
-(define (generate-consts-signature enum-xexpr [registry #f])
+(define (generate-consts-signature enum-xexpr [registry #f] [lookup #hash()])
   ; Read this carefully. Notice that we're in quasiquote mode, and
   ; the expression expands such that (system-type 'word) expands
   ; on the client's system, but the "LL" check expands during
@@ -537,7 +534,7 @@
 ; to contain a typedef. Declaring _bitmask in Racket actually happens
 ; as part of processing enums.
 
-(define (generate-bitmask-signature bitmask-xexpr [registry #f])
+(define (generate-bitmask-signature bitmask-xexpr [registry #f] [lookup #hash()])
   (define alias (attr-ref bitmask-xexpr 'alias #f))
   `(define ,(cname (get-type-name bitmask-xexpr))
      ,(cname (or alias
@@ -562,7 +559,7 @@
 ;; strings after the parameter types. The return type is not even
 ;; in a tag at all, so I have a different approach to deduce it.
 
-(define (generate-funcpointer-signature funcpointer-xexpr [registry #f])
+(define (generate-funcpointer-signature funcpointer-xexpr [registry #f] [lookup #hash()])
   (define name (get-type-name funcpointer-xexpr))
   (define text-signature (get-all-cdata funcpointer-xexpr))
 
@@ -576,7 +573,8 @@
 
   (define parameter-types (map (λ (type-xexpr decl)
                                  (infer-pointer-type (shrink-wrap-cdata type-xexpr)
-                                                      (string->list decl)))
+                                                     (string->list decl)
+                                                     lookup))
                                parameter-type-elements
                                adjacent-cdata))
 
@@ -584,7 +582,8 @@
   (define return-signature (cadr (regexp-match #px"typedef ([^\\(]+)" text-signature)))
   (define undecorated-return-type (regexp-replace* #px"[\\s\\*\\[\\]]" return-signature ""))
   (define return-type (infer-pointer-type undecorated-return-type
-                                           (string->list return-signature)))
+                                          (string->list return-signature)
+                                          lookup))
 
   `(define ,(cname name) (_cpointer/null
                           (_fun ,@parameter-types
@@ -658,7 +657,7 @@
                  '(-> (begin (check-vkResult r 'w) (values o1 o2 o3))))))
 
 
-(define (generate-type-spec param ordinal)
+(define (generate-type-spec param ordinal lookup)
   (define c-code (shrink-wrap-cdata param))
   (define characters (string->list c-code))
   (define ctype/text (get-text-in-tagged-child 'type param))
@@ -671,7 +670,7 @@
   (define type-expr
     (if by-reference?
         `(_ptr ,mode ,(cname ctype/text))
-        (infer-pointer-type ctype/text characters)))
+        (infer-pointer-type ctype/text characters lookup)))
 
   `(,identifier : ,type-expr))
 
@@ -681,7 +680,8 @@
                  (generate-type-spec
                   '(param (type "VkFlags")
                           (name "flags"))
-                  0)
+                  0
+                  #hash())
                  '(i0 : _VkFlags))
     (test-equal? "Pointer type"
                  (generate-type-spec
@@ -689,18 +689,20 @@
                           (type "VkInstanceCreateInfo")
                           "* "
                           (name "pCreateInfo"))
-                  0)
+                  0
+                  #hash())
                  '(i0 : (_cpointer/null _VkInstanceCreateInfo)))
     (test-equal? "Pass by reference"
                  (generate-type-spec
                   '(param (type "VkInstance")
                           "* "
                           (name "pInstance"))
-                  2)
+                  2
+                  #hash())
                  '(o2 : (_ptr o _VkInstance)))))
     
 
-(define (generate-command-signature command-xexpr [registry #f])
+(define (generate-command-signature command-xexpr [registry #f] [lookup #hash()])
   (define children (filter (λ (x) (and (txexpr? x)
                                        (member (get-tag x) '(param proto))))
                            (get-elements command-xexpr)))
@@ -712,10 +714,14 @@
   (define undecorated-return (get-text-in-tagged-child 'type proto))
   (define characters (string->list (shrink-wrap-cdata proto)))
   (define ret (infer-pointer-type undecorated-return
-                                   characters))
+                                  characters
+                                  lookup))
 
   (define param-elements (cdr children))
-  (define type-specs (map generate-type-spec param-elements (range (length param-elements))))
+  (define type-specs (map (λ (param ordinal)
+                            (generate-type-spec param ordinal lookup))
+                          param-elements
+                          (range (length param-elements))))
 
   `(define-vulkan ,id
      (_fun ,@type-specs
@@ -763,6 +769,7 @@
 
 (define (generate-vulkan-bindings registry)
   (define ordered (curate-registry registry))
+  (define lookup (get-type-lookup ordered))
 
   ; To be clear, this is a superset of the category attribute values
   ; you'd expect to find in the Vulkan registry. (curate-registry)
@@ -788,4 +795,4 @@
     (if alias
         (let ([namer (if (tag=? 'command type) string->symbol cname)])
           `(define ,(namer (get-type-name type)) ,(namer alias)))
-        ((hash-ref category=>proc category) type registry))))
+        ((hash-ref category=>proc category) type registry lookup))))

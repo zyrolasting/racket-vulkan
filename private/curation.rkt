@@ -59,6 +59,12 @@
              x))
        types))
 
+(define get-type-lookup
+  (simple-memo
+   (λ (types)
+     (make-immutable-hash (map (λ (x) (cons (get-type-name x) x))
+                               types)))))
+
 
 ;; Unfortunately the registry makes no guarentee that types will appear
 ;; in a specific order. If you simply blast the types out in the order
@@ -71,8 +77,7 @@
 ;; caution re: forward declarations and recursive definitions.
 (define (sort-types types)
   ;; Build a lookup so we can work with type names alone.
-  (define lookup (make-immutable-hash (map (λ (x) (cons (get-type-name x) x))
-                                           types)))
+  (define lookup (get-type-lookup types))
   (define (resolve name)
     (hash-ref lookup name))
 

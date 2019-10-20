@@ -6,7 +6,8 @@
 (provide (all-defined-out))
 
 (require racket/list
-         racket/string)
+         racket/string
+         "./txexpr.rkt")
 
 (module+ test
   (require rackunit))
@@ -17,19 +18,21 @@
 (define (cnamef fmt-string . args)
   (cname (apply format fmt-string args)))
 
-(define (infer-pointer-type undecorated-type characters)
-  (define pointer-depth
-    (count (λ (ch) (or (char=? #\* ch)
-                       (char=? #\[ ch))) ; TODO: Should this be wrapped as an array type?
-           characters))
-
-  ; Wrap pointer declarations equal to the number of '*'s
-  (for/fold ([sig (cname undecorated-type)])
-            ([i (in-range pointer-depth)])
-    (define ptrtype `(_cpointer/null ,sig))
-    (if (member ptrtype '((_cpointer/null _int8) (_cpointer/null _char)))
-        '_bytes/nul-terminated
-        ptrtype)))
+(define (infer-pointer-type undecorated-type characters [lookup #hash()])
+  (if (and (hash-has-key? lookup undecorated-type)
+           (category=? "struct" (hash-ref lookup undecorated-type)))
+      (cname (string-append undecorated-type "-pointer/null"))
+      (let ([pointer-depth
+             (count (λ (ch) (or (char=? #\* ch)
+                                (char=? #\[ ch))) ; TODO: Should this be wrapped as an array type?
+                    characters)])
+        ; Wrap pointer declarations equal to the number of '*'s
+        (for/fold ([sig (cname undecorated-type)])
+                  ([i (in-range pointer-depth)])
+          (define ptrtype `(_cpointer/null ,sig))
+          (if (member ptrtype '((_cpointer/null _int8) (_cpointer/null _char)))
+              '_bytes/nul-terminated
+              ptrtype)))))
 
 (module+ test
   (test-equal? "No pointers"
@@ -41,6 +44,9 @@
   (test-equal? "Depth = 2, mixed chars"
                (infer-pointer-type "int" '(#\1 #\* #\[))
                '(_cpointer/null (_cpointer/null _int)))
+  (test-equal? "Special case: Struct name"
+               (infer-pointer-type "ST" '() '#hash(("ST" . (type ((category "struct"))))))
+               '_ST-pointer/null)
   (test-case "Special case: char*"
     (check-equal? (infer-pointer-type "char" '(#\*))
                   '_bytes/nul-terminated)
