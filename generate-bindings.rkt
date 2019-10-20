@@ -83,7 +83,10 @@
                                    [(windows) "vulkan"]
                                    [else "libvulkan"]))
                  (define-ffi-definer define-vulkan (ffi-lib libname)
-                   #:default-make-fail make-not-available))])
+                   #:default-make-fail make-not-available)
+                 (define (check-vkResult v who)
+                   (unless (equal? v 0)
+                     (error who "failed: ~a" v))))])
       (writeln sig))
     (for ([sig platform-bindings])
       (writeln sig))
@@ -608,29 +611,125 @@
 ;; ------------------------------------------------------------------
 ;; All that stuff above was just the data. Now let's talk functions.
 
+
+;; The return value of a function in context of the FFI is a bit tricky.
+;; We want to capture pass-by-reference values returned to Racket, and
+;; incorporate return code checking. This procedure generates code for
+;; use as a `maybe-wrapper` in the `_fun` form. This assumes that `r`
+;; is the identifier bound to the function's normal return value.
+(define (generate-maybe-wrapper vkResult? others who)
+  (if (and (not vkResult?) (empty? others))
+      null
+      (let* ([sequence '(begin)]
+             [+returncode-check (if vkResult?
+                                    (cons `(check-vkResult r ',who)
+                                          sequence)
+                                    sequence)])
+        `(-> ,(reverse
+                 (case (length others)
+                   [(0) +returncode-check]
+                   [(1) (cons (car others) +returncode-check)]
+                   [else (cons `(values . ,others) +returncode-check)]))))))
+
+(module+ test
+  (test-case "(generate-maybe-wrapper)"
+    (test-equal? "vkResult = #f, no others"
+                 (generate-maybe-wrapper #f '() 'w)
+                 null)
+
+    (test-equal? "vkResult = #f, one other"
+                 (generate-maybe-wrapper #f '(o1) 'w)
+                 '(-> (begin o1)))
+
+    (test-equal? "vkResult = #f, many others"
+                 (generate-maybe-wrapper #f '(o1 o2 o3) 'w)
+                 '(-> (begin (values o1 o2 o3))))    
+
+    (test-equal? "vkResult = #t, no others"
+                 (generate-maybe-wrapper #t '() 'w)
+                 '(-> (begin (check-vkResult r 'w))))
+
+    (test-equal? "vkResult = #t, one other"
+                 (generate-maybe-wrapper #t '(o1) 'w)
+                 '(-> (begin (check-vkResult r 'w) o1)))
+
+    (test-equal? "vkResult = #t, many others"
+                 (generate-maybe-wrapper #t '(o1 o2 o3) 'w)
+                 '(-> (begin (check-vkResult r 'w) (values o1 o2 o3))))))
+
+
+(define (generate-type-spec param ordinal)
+  (define c-code (shrink-wrap-cdata param))
+  (define characters (string->list c-code))
+  (define ctype/text (get-text-in-tagged-child 'type param))
+
+  (define pointer? (string-contains? c-code "*"))
+  (define by-reference? (and pointer? (not (regexp-match? #px"const\\s+\\*" c-code))))
+  ;(define const-pointer? (regexp-match? #px"\\*.+const" c-code))
+  (define mode (if by-reference? 'o 'i))
+  (define identifier (string->symbol (format "~a~a" mode ordinal)))
+  (define type-expr
+    (if by-reference?
+        `(_ptr ,mode ,(cname ctype/text))
+        (infer-pointer-type ctype/text characters)))
+
+  `(,identifier : ,type-expr))
+
+(module+ test
+  (test-case "(generate-type-spec)"
+    (test-equal? "Simple type"
+                 (generate-type-spec
+                  '(param (type "VkFlags")
+                          (name "flags"))
+                  0)
+                 '(i0 : _VkFlags))
+    (test-equal? "Pointer type"
+                 (generate-type-spec
+                  '(param "const "
+                          (type "VkInstanceCreateInfo")
+                          "* "
+                          (name "pCreateInfo"))
+                  0)
+                 '(i0 : (_cpointer/null _VkInstanceCreateInfo)))
+    (test-equal? "Pass by reference"
+                 (generate-type-spec
+                  '(param (type "VkInstance")
+                          "* "
+                          (name "pInstance"))
+                  2)
+                 '(o2 : (_ptr o _VkInstance)))))
+    
+
 (define (generate-command-signature command-xexpr [registry #f])
   (define children (filter (λ (x) (and (txexpr? x)
                                        (member (get-tag x) '(param proto))))
                            (get-elements command-xexpr)))
-  (define (find/text t tx)
-    (shrink-wrap-cdata (find-first-by-tag t tx)))
 
   ; <proto> always comes first.
   ; https://www.khronos.org/registry/vulkan/specs/1.1/registry.html#_contents_of_command_tags
   (define proto (car children))
-  (define id (string->symbol (find/text 'name proto)))
-  (define undecorated-return (find/text 'type proto))
+  (define id (string->symbol (get-text-in-tagged-child 'name proto)))
+  (define undecorated-return (get-text-in-tagged-child 'type proto))
   (define characters (string->list (shrink-wrap-cdata proto)))
   (define ret (infer-pointer-type undecorated-return
                                    characters))
 
   (define param-elements (cdr children))
-  (define params (map (λ (x)
-                        (infer-pointer-type (find/text 'type x)
-                                             (string->list (shrink-wrap-cdata x))))
-                      param-elements))
+  (define type-specs (map generate-type-spec param-elements (range (length param-elements))))
 
-  `(define-vulkan ,id (_fun ,@params -> ,ret)))
+  `(define-vulkan ,id
+     (_fun ,@type-specs
+           ->
+           (r : ,ret)
+           . ,(generate-maybe-wrapper (equal? undecorated-return "VkResult")
+                                      (filter-map
+                                       (λ (type-spec)
+                                         (and (member ': type-spec)
+                                              (string-prefix? (symbol->string (car type-spec))
+                                                              "o")
+                                              (car type-spec)))
+                                       type-specs)
+                                      id))))
 
 
 (module+ test
@@ -651,11 +750,11 @@
                          "* "
                          (name "pInstance"))))
                '(define-vulkan vkCreateInstance
-                  (_fun (_cpointer/null _VkInstanceCreateInfo)
-                        (_cpointer/null _VkAllocationCallbacks)
-                        (_cpointer/null _VkInstance)
-                        ->
-                        _VkResult))))
+                  (_fun (i0 : (_cpointer/null _VkInstanceCreateInfo))
+                        (i1 : (_cpointer/null _VkAllocationCallbacks))
+                        (o2 : (_ptr o _VkInstance))
+                        -> (r : _VkResult)
+                        -> (begin (check-vkResult r 'vkCreateInstance) o2)))))
 
 
 ;; ------------------------------------------------------------------
@@ -690,9 +789,3 @@
         (let ([namer (if (tag=? 'command type) string->symbol cname)])
           `(define ,(namer (get-type-name type)) ,(namer alias)))
         ((hash-ref category=>proc category) type registry))))
-
-
-(module+ test
-  (test-true "E2E does not crash when producing data."
-             (andmap list?
-                     (generate-vulkan-bindings (get-vulkan-spec 'local)))))
