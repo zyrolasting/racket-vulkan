@@ -124,17 +124,7 @@
 
   ; Use lookup to transform names back to elements, and tack
   ; the aliased elements back on.
-  (define ordered (map resolve most-to-least-responsible/names))
-
-  ;; We want the basic types to always come first.
-  (define-values (basetypes customtypes)
-    (partition (λ (x) (or (category=? "ctype" x)
-                          (category=? "basetype" x)))
-               ordered))
-
-  (append (filter (λ (x) (category=? "ctype" x)) basetypes)
-          (filter (λ (x) (category=? "basetype" x)) basetypes)
-          customtypes))
+  (map resolve most-to-least-responsible/names))
 
 
 #;(module+ test
@@ -196,4 +186,15 @@
             (curate-enums (find-all-by-tag 'enums registry))
             (curate-commands (get-tagged-children (find-first-by-tag 'commands registry)))))
 
-  curated-declarations)
+  ;; We want the basic types to always come first.
+  (define forced-preamble-categories '("ctype" "basetype" "symdecl" "consts"))
+  (define-values (basetypes customtypes)
+    (partition (λ (x) (member (attr-ref x 'category)
+                              forced-preamble-categories))
+               curated-declarations))
+
+  (append (filter (λ (x) (category=? "ctype" x)) basetypes)
+          (filter (λ (x) (category=? "basetype" x)) basetypes)
+          (filter (λ (x) (category=? "symdecl" x)) basetypes)
+          (filter (λ (x) (category=? "consts" x)) basetypes)
+          customtypes))
