@@ -22,6 +22,7 @@
    0
    #f))
 
-
-(define instance (vkCreateInstance instcreateinfo #f))
+(define instance-ptr (malloc _VkInstance))
+(vkCreateInstance instcreateinfo #f instance-ptr)
+(define instance (ptr-ref instance-ptr _VkInstance))
 (vkDestroyInstance instance #f)
