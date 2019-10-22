@@ -447,9 +447,9 @@
 
   `(begin
      . ,(map (λ (enumerant)
-               `(define ,(cname (attr-ref enumerant 'name))
+               `(define ,(string->symbol (attr-ref enumerant 'name))
                   ,(if (attrs-have-key? enumerant 'alias)
-                       (cname (attr-ref enumerant 'alias))
+                       (string->symbol (attr-ref enumerant 'alias))
                        (c-numeric-lit->number (attr-ref enumerant 'value)))))
              (filter (λ (x) (tag=? 'enum x))
                      (get-elements enum-xexpr)))))
@@ -463,17 +463,17 @@
                         (enum ((value "256") (name "D")))
                         (enum ((name "E") (alias "C")))))
                '(begin
-                  (define _A
+                  (define A
                     (- (integer-bytes->integer (make-bytes (ctype-sizeof _long) 255) #t)
                        0))
-                  (define _B
+                  (define B
                     (- (integer-bytes->integer (make-bytes (ctype-sizeof _llong) 255) #t)
                        2))
-                  (define _C
+                  (define C
                     (- (integer-bytes->integer (make-bytes (ctype-sizeof _long) 255) #f)
                        0))
-                  (define _D 256)
-                  (define _E _C))))
+                  (define D 256)
+                  (define E C))))
 
 
 ;; ------------------------------------------------------------------
