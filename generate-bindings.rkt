@@ -200,13 +200,21 @@
   (define struct-name (get-type-name struct-xexpr))
   (define (generate-member-signature member-xexpr)
     (define name (snatch-cdata 'name member-xexpr))
+    (define enum (find-first-by-tag 'enum member-xexpr))
+    (define numeric-length (regexp-match #px"\\[(\\d+)\\]" (shrink-wrap-cdata member-xexpr)))
     (define undecorated-type (snatch-cdata 'type member-xexpr))
     (define characters (string->list (shrink-wrap-cdata member-xexpr)))
-    (define type (infer-pointer-type (if (equal? undecorated-type struct-name)
-                                          "void"
-                                          undecorated-type)
-                                     characters
-                                     lookup))
+    (define inferred-type (infer-pointer-type (if (equal? undecorated-type struct-name)
+                                                  "void"
+                                                  undecorated-type)
+                                              characters
+                                              lookup))
+
+    (define type (if enum
+                     `(_array ,inferred-type ,(string->symbol (shrink-wrap-cdata enum)))
+                     (if numeric-length
+                         `(_array ,inferred-type ,(string->number (cadr numeric-length)))
+                         inferred-type)))
 
     `(,(string->symbol name) ,type))
 

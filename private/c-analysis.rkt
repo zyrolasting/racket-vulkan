@@ -26,10 +26,7 @@
                                   (attr-ref el 'alias)
                                   undecorated-type))
                             "-pointer/null"))
-      (let ([pointer-depth
-             (count (λ (ch) (or (char=? #\* ch)
-                                (char=? #\[ ch))) ; TODO: Should this be wrapped as an array type?
-                    characters)])
+      (let ([pointer-depth (count (λ (ch) (char=? #\* ch)) characters)])
         ; Wrap pointer declarations equal to the number of '*'s
         (for/fold ([sig (cname undecorated-type)])
                   ([i (in-range pointer-depth)])
@@ -46,7 +43,7 @@
                (infer-pointer-type "void" '(#\1 #\* #\f))
                '(_cpointer/null _void))
   (test-equal? "Depth = 2, mixed chars"
-               (infer-pointer-type "int" '(#\1 #\* #\[))
+               (infer-pointer-type "int" '(#\1 #\* #\*))
                '(_cpointer/null (_cpointer/null _int)))
   (test-equal? "Special case: Struct name"
                (infer-pointer-type "ST" '() '#hash(("ST" . (type ((category "struct"))))))
