@@ -21,7 +21,11 @@
 (define (infer-pointer-type undecorated-type characters [lookup #hash()])
   (if (and (hash-has-key? lookup undecorated-type)
            (category=? "struct" (hash-ref lookup undecorated-type)))
-      (cname (string-append undecorated-type "-pointer/null"))
+      (cname (string-append (let ([el (hash-ref lookup undecorated-type)])
+                              (if (attrs-have-key? el 'alias)
+                                  (attr-ref el 'alias)
+                                  undecorated-type))
+                            "-pointer/null"))
       (let ([pointer-depth
              (count (λ (ch) (or (char=? #\* ch)
                                 (char=? #\[ ch))) ; TODO: Should this be wrapped as an array type?
