@@ -361,10 +361,10 @@
                   (string->number val))))))
 
   ; Pair up enumerant names and values.
-  (define pairs (map (λ (x) (cons (attr-ref x 'name)
-                                  (extract-value x)))
-                     (filter (λ (x) (tag=? 'enum x))
-                             (get-elements enum-decl))))
+  (define pairs (reverse (map (λ (x) (cons (attr-ref x 'name)
+                                           (extract-value x)))
+                              (filter (λ (x) (tag=? 'enum x))
+                                      (get-elements enum-decl)))))
 
   ; To be nice to Racketeers, let's give them easy flags when
   ; using Vulkan so they don't have to OR things together themselves.
@@ -372,15 +372,18 @@
                     '_bitmask
                     '_enum))
 
-  `(define ,(cname name)
-     (,ctype
-      ',(for/fold ([decls '()])
-                  ([enumerant (in-list (reverse pairs))])
-          ; The ctype declaration assumes a list of form (name0 = val0 name1 = val1 ...)
-          (define w/value (cons (cdr enumerant) decls))
-          (define w/= (cons '= w/value))
-          (define w/all (cons (string->symbol (car enumerant)) w/=))
-          w/all))))
+  `(begin
+     (define ,(cname name)
+       (,ctype
+        ',(for/fold ([decls '()])
+                    ([enumerant (in-list pairs)])
+            ; The ctype declaration assumes a list of form (name0 = val0 name1 = val1 ...)
+            (define w/value (cons (cdr enumerant) decls))
+            (define w/= (cons '= w/value))
+            (define w/all (cons (string->symbol (car enumerant)) w/=))
+            w/all)))
+     . ,(for/list ([enumerant (in-list (reverse pairs))])
+          `(define ,(string->symbol (car enumerant)) ,(cdr enumerant)))))
 
 (module+ test
   (test-case "(generate-enum-signature)"
@@ -404,30 +407,48 @@
     (check-equal?
      (generate-enum-signature '(type ((category "enum") (name "VkBlendOp")))
                               enum-registry)
-     '(define _VkBlendOp
-        (_enum '(VK_BLEND_OP_ADD = 0
-                 VK_SHIMMED = 1
-                 VK_BLEND_OP_SUBTRACT = 1
-                 VK_BLEND_OP_REVERSE_SUBTRACT = 2
-                 VK_BLEND_OP_MIN = 3
-                 VK_BLEND_OP_MAX = 4))))
+     '(begin
+        (define _VkBlendOp
+          (_enum '(VK_BLEND_OP_ADD = 0
+                   VK_SHIMMED = 1
+                   VK_BLEND_OP_SUBTRACT = 1
+                   VK_BLEND_OP_REVERSE_SUBTRACT = 2
+                   VK_BLEND_OP_MIN = 3
+                   VK_BLEND_OP_MAX = 4)))
+          (define VK_BLEND_OP_ADD 0)
+          (define VK_SHIMMED 1)
+          (define VK_BLEND_OP_SUBTRACT 1)
+          (define VK_BLEND_OP_REVERSE_SUBTRACT 2)
+          (define VK_BLEND_OP_MIN 3)
+          (define VK_BLEND_OP_MAX 4)))
+
     (check-equal?
      (generate-enum-signature '(type ((category "enum") (name "NotPresent")))
                               enum-registry)
-     '(define _NotPresent (_enum '())))
+     '(begin (define _NotPresent (_enum '()))))
 
     (check-equal?
      (generate-enum-signature '(type ((category "enum") (name "VkShaderStageFlagBits")))
                               enum-registry)
-     '(define _VkShaderStageFlagBits
-        (_bitmask '(VK_SHADER_STAGE_VERTEX_BIT = 0
-                    VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT = 1
-                    VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT = 2
-                    VK_SHADER_STAGE_GEOMETRY_BIT = 4
-                    VK_SHADER_STAGE_FRAGMENT_BIT = 8
-                    VK_SHADER_STAGE_COMPUTE_BIT = 16
-                    VK_SHADER_STAGE_ALL_GRAPHICS = 31
-                    VK_SHADER_STAGE_ALL = 2147483647))))))
+     '(begin
+        (define _VkShaderStageFlagBits
+          (_bitmask '(VK_SHADER_STAGE_VERTEX_BIT = 0
+                      VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT = 1
+                      VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT = 2
+                      VK_SHADER_STAGE_GEOMETRY_BIT = 4
+                      VK_SHADER_STAGE_FRAGMENT_BIT = 8
+                      VK_SHADER_STAGE_COMPUTE_BIT = 16
+                      VK_SHADER_STAGE_ALL_GRAPHICS = 31
+                      VK_SHADER_STAGE_ALL = 2147483647)))
+        (define VK_SHADER_STAGE_VERTEX_BIT 0)
+        (define VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT 1)
+        (define VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT 2)
+        (define VK_SHADER_STAGE_GEOMETRY_BIT 4)
+        (define VK_SHADER_STAGE_FRAGMENT_BIT 8)
+        (define VK_SHADER_STAGE_COMPUTE_BIT 16)
+        (define VK_SHADER_STAGE_ALL_GRAPHICS 31)
+        (define VK_SHADER_STAGE_ALL 2147483647)))))
+
 
 
 ;; ------------------------------------------------------------------

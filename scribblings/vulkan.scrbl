@@ -61,9 +61,7 @@ The translation from C to Racket is not 1-to-1. Observe the following caveats:
 @margin-note{To repeat, the interface is unstable and these caveats are subject to change.}
 @itemlist[
 @item{All identifiers acting as C types are prefixed with an underscore. So, the C type @tt{VkInstance} is bound to the @tt{_VkInstance} identifier in Racket.}
-@item{All enumerants are symbols. e.g. @tt{VK_SUCCESS} is @racket['VK_SUCCESS] in Racket. Take care to use symbols for purposes of comparing return codes, or passing arguments to C functions.}
-@item{All enumerants acting as bitmasks are declared using @racket[_bitmask], and should be passed
-to functions in a list without use of @racket[bitwise-ior] on your end.}
+@item{All enumerants are available as symbols and identifiers. The Racket identifier @tt{VK_SUCCESS} binds to the Racket value equivalent of @tt{VK_SUCCESS} In Vulkan. However, symbols like @racket['VK_SUCCESS] are available for FFI wrapper procedures that translate @racket[_enum] or @racket[_bitmask] values.}
 @item{API constants that are NOT from enumerated types are identifiers bound to a Racket value. e.g. @tt{VK_API_VERSION_1_1}.}
 @item{All Vulkan functions are provided as Racket procedures with an identifier matching the name. e.g. The @tt{vkCreateInstance} C function is a Racket procedure also named @tt{vkCreateInstance}.}
 @item{A Racket procedure's presence is not a guarentee that the associated C function is available as an object in the system library. If you call @tt{vkCreateAndroidSurfaceKHR} on a non-Android platform, the C function will not be found.}
