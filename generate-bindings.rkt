@@ -149,11 +149,22 @@
       `(_list-struct ,ctype)))
 
 (define (generate-union-signature union-xexpr [registry #f] [lookup #hash()])
-  `(define ,(cname (get-type-name union-xexpr))
-     (_union
-      . ,(map generate-member-signature/union
-              (get-elements-of-tag 'member
-                                   union-xexpr)))))
+  (define members (get-elements-of-tag 'member union-xexpr))
+  (define name (get-type-name union-xexpr))
+  `(begin
+     (define ,(cname name)
+       (_union
+        . ,(map generate-member-signature/union
+                members)))
+     . ,(map
+         (λ (x ordinal)
+           `(define (,(string->symbol (string-append name
+                                                     "-"
+                                                     (shrink-wrap-cdata (find-first-by-tag 'name x)))) u)
+              (union-ref u ,ordinal)))
+         members
+         (range (length members)))))
+
 
 (module+ test
   (define example-union-xexpr
@@ -169,10 +180,17 @@
                    "[4]")))
     (test-equal? "(generate-union-signature)"
                  (generate-union-signature example-union-xexpr)
-                 '(define _VkClearColorValue
-                    (_union (_list-struct _float _float _float _float)
-                            (_list-struct _int32_t _int32_t _int32_t _int32_t)
-                            (_list-struct _uint32_t _uint32_t _uint32_t _uint32_t)))))
+                 '(begin
+                    (define _VkClearColorValue
+                      (_union (_list-struct _float _float _float _float)
+                              (_list-struct _int32_t _int32_t _int32_t _int32_t)
+                              (_list-struct _uint32_t _uint32_t _uint32_t _uint32_t)))
+                    (define (VkClearColorValue-float32 u)
+                      (union-ref u 0))
+                    (define (VkClearColorValue-int32 u)
+                      (union-ref u 1))
+                    (define (VkClearColorValue-uint32 u)
+                      (union-ref u 2)))))
 
 
 ;; ------------------------------------------------

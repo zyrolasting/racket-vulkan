@@ -67,6 +67,7 @@ to functions in a list without use of @racket[bitwise-ior] on your end.}
 @item{API constants that are NOT from enumerated types are identifiers bound to a Racket value. e.g. @tt{VK_API_VERSION_1_1}.}
 @item{All Vulkan functions are provided as Racket procedures with an identifier matching the name. e.g. The @tt{vkCreateInstance} C function is a Racket procedure also named @tt{vkCreateInstance}.}
 @item{A Racket procedure's presence is not a guarentee that the associated C function is available as an object in the system library. If you call @tt{vkCreateAndroidSurfaceKHR} on a non-Android platform, the C function will not be found.}
+@item{Unions are generated with accessor procedures that wrap @racket[union-ref]. So if a union @tt{U} has a member named @tt{floats}, you can access all Racket values converted from that union using @tt{(U-floats union-val)}.}
 @item{Structs are created using @racket[define-cstruct], meaning that all bindings generated from that form exist for every Vulkan structure (e.g. @tt{_VkImageCreateInfo-pointer/null}).}
 @item{As an aid, all functions that return a @tt{VkResult} are automatically
 checked. Any return value that is not @tt{VK_SUCCESS} translates to a raised
