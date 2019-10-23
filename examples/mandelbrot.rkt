@@ -34,20 +34,14 @@
   (define instance (createInstance))
   (define physical-device (findPhysicalDevice instance))
 
-  (define p (malloc _VkPhysicalDeviceProperties 'atomic))
-  (memset p 0 (ctype-sizeof _VkPhysicalDeviceProperties))
-  (vkGetPhysicalDeviceProperties physical-device p)
+  (define size (ctype-sizeof _VkPhysicalDeviceProperties))
+  (displayln size)
+  (define p (malloc size 'atomic))
+  (memset p 0 size)
 
+  (vkGetPhysicalDeviceProperties physical-device p)
   (define props (ptr-ref p _VkPhysicalDeviceProperties))
-  (writeln (VkPhysicalDeviceProperties-apiVersion props))
-  (writeln (VkPhysicalDeviceProperties-driverVersion props))
-  (writeln (VkPhysicalDeviceProperties-vendorID props))
-  (writeln (VkPhysicalDeviceProperties-deviceID props))
-  (writeln (VkPhysicalDeviceProperties-deviceType props))
-  (writeln (VkPhysicalDeviceProperties-deviceName props))
-  (writeln (VkPhysicalDeviceProperties-pipelineCacheUUID props))
-  (writeln (VkPhysicalDeviceProperties-limits props))
-  (writeln (VkPhysicalDeviceProperties-sparseProperties props))
+  (writeln (VkPhysicalDeviceProperties->list* props))
 
   (vkDestroyInstance instance #f))
 
@@ -76,16 +70,13 @@
                                    p))))
 
 (define (findPhysicalDevice instance)
-  ; List all physical devices on the system.
-  (define-values (deviceCount devices)
-    (two-step-alloc
-     _VkPhysicalDevice
-     (λ (n b) (vkEnumeratePhysicalDevices instance n b))))
-
-  ; Optimisically assert that the first device will handle our needs.
-  ; Not a good idea in a real-world scenario.
-  (array-ref (ptr-ref devices
-                      (_array _VkPhysicalDevice
-                              deviceCount)
-                      0)
-             0))
+  (define pDeviceCount (malloc _uint32_t 'atomic))
+  (vkEnumeratePhysicalDevices instance pDeviceCount #f)
+  (define num (ptr-ref pDeviceCount _uint32_t))
+  (when (= num 0)
+    (error "Expected more than zero physical devices."))
+  (define size (* num (ctype-sizeof _VkPhysicalDevice)))
+  (define physical-devices (malloc size 'atomic))
+  (vkEnumeratePhysicalDevices instance pDeviceCount physical-devices)
+  (define first-device (ptr-ref physical-devices _VkPhysicalDevice 0))
+  first-device)

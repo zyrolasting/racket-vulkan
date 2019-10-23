@@ -204,7 +204,7 @@
     (define numeric-length (regexp-match #px"\\[(\\d+)\\]" (shrink-wrap-cdata member-xexpr)))
     (define undecorated-type (snatch-cdata 'type member-xexpr))
     (define characters (string->list (shrink-wrap-cdata member-xexpr)))
-    (define inferred-type (infer-pointer-type (if (equal? undecorated-type struct-name)
+    (define inferred-type (infer-type (if (equal? undecorated-type struct-name)
                                                   "void"
                                                   undecorated-type)
                                               characters
@@ -566,7 +566,7 @@
                               parameter-type-elements))
 
   (define parameter-types (map (λ (type-xexpr decl)
-                                 (infer-pointer-type (shrink-wrap-cdata type-xexpr)
+                                 (infer-type (shrink-wrap-cdata type-xexpr)
                                                      (string->list decl)
                                                      lookup))
                                parameter-type-elements
@@ -575,7 +575,7 @@
   ; Deduce the return type
   (define return-signature (cadr (regexp-match #px"typedef ([^\\(]+)" text-signature)))
   (define undecorated-return-type (regexp-replace* #px"[\\s\\*\\[\\]]" return-signature ""))
-  (define return-type (infer-pointer-type undecorated-return-type
+  (define return-type (infer-type undecorated-return-type
                                           (string->list return-signature)
                                           lookup))
 
@@ -660,7 +660,7 @@
   (define id (string->symbol (get-text-in-tagged-child 'name proto)))
   (define undecorated-return (get-text-in-tagged-child 'type proto))
   (define characters (string->list (shrink-wrap-cdata proto)))
-  (define ret (infer-pointer-type undecorated-return
+  (define ret (infer-type undecorated-return
                                   characters
                                   lookup))
 
