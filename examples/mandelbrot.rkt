@@ -18,11 +18,10 @@
          ffi/cvector)
 
 (define (enable-validation-layer?)
-  (define val (environment-variables-ref
-               (current-environment-variables)
-               #"RACKET_VULKAN_ENABLE_VALIDATION_LAYER"))
-  (and val
-       (bytes=? val #"true")))
+  (equal? #"true"
+          (environment-variables-ref
+           (current-environment-variables)
+           #"RACKET_VULKAN_ENABLE_VALIDATION_LAYER")))
 
 (define (two-step-alloc _t f [who 'two-step-alloc])
   (define pnum (malloc _uint32_t 'atomic))
@@ -58,7 +57,11 @@
   (define with-validation (enable-validation-layer?))
   (define layers (get-layers with-validation))
   (define extensions (get-extensions with-validation))
-  (define instance (create-instance layers extensions))
+  (define instance (create-instance layers extensions with-validation))
+
+  (when with-validation
+    (register-debug-callback instance))
+
   (define physical-device (find-physical-device instance))
   (define queue-family-index (get-compute-queue-family-index physical-device))
   (define logical-device (create-logical-device instance layers physical-device queue-family-index))
@@ -94,8 +97,8 @@
     (error "The validation layer is not available on this system."))
 
   (if with-validation
-      (cvector _char validation-layer-name)
-      (cvector _char)))
+      (cvector _bytes/nul-terminated validation-layer-name)
+      (cvector _bytes/nul-terminated)))
 
 (define (get-extensions with-validation)
   (define extension-count/p (malloc _uint32_t 'atomic))
@@ -119,8 +122,8 @@
     (error "The validation layer is not available on this system."))
 
   (if with-validation
-      (cvector _char debug-extension-name)
-      (cvector _char)))
+      (cvector _bytes/nul-terminated debug-extension-name)
+      (cvector _bytes/nul-terminated)))
 
 
 (define (get-queue logical-device queue-family-index)
@@ -197,8 +200,35 @@
 
   index)
 
-(define (create-instance layers extensions)
+(define (debug-report-callback flags objectType object location messageCode pLayerPrefix pMessage pUserData)
+  (printf "Debug Report: ~a: ~a~n" pLayerPrefix pMessage)
+  VK_FALSE)
 
+(define (register-debug-callback instance)
+  (define drcci/p (make-zero _VkDebugReportCallbackCreateInfoEXT
+                             _VkDebugReportCallbackCreateInfoEXT-pointer))
+  (define drcci (ptr-ref drcci/p _VkDebugReportCallbackCreateInfoEXT))
+  (set-VkDebugReportCallbackCreateInfoEXT-sType! drcci 'VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT)
+  (set-VkDebugReportCallbackCreateInfoEXT-flags! drcci '(VK_DEBUG_REPORT_ERROR_BIT_EXT
+                                                         VK_DEBUG_REPORT_WARNING_BIT_EXT
+                                                         VK_DEBUG_REPORT_INFORMATION_BIT_EXT
+                                                         VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT))
+  (set-VkDebugReportCallbackCreateInfoEXT-pfnCallback! drcci (function-ptr
+                                                              debug-report-callback
+                                                              _PFN_vkDebugReportCallbackEXT))
+  (define create-debug-report-callback
+    (function-ptr (vkGetInstanceProcAddr instance #"vkCreateDebugReportCallbackEXT")
+                  (_cprocedure (list _VkInstance _pointer _pointer _pointer)
+                               (list _VkResult))))
+
+  (define callback/p (malloc _VkDebugReportCallbackEXT 'atomic))
+  (check-vkResult (create-debug-report-callback instance
+                                                drcci/p
+                                                #f
+                                                callback/p))
+  (ptr-ref callback/p _pointer _VkDebugReportCallbackEXT))
+
+(define (create-instance layers extensions with-validation)
   (define appInfo (make-VkApplicationInfo 'VK_STRUCTURE_TYPE_APPLICATION_INFO
                                           #f
                                           #"Mandelbrot"
@@ -221,6 +251,8 @@
           (λ (p) (vkCreateInstance instinfo
                                    #f
                                    p))))
+
+
 
 (define (find-physical-device instance)
   (define pDeviceCount (malloc _uint32_t 'atomic))
