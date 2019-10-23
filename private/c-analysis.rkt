@@ -33,7 +33,7 @@
       (if (attrs-have-key? el 'alias)
           (attr-ref el 'alias)
           undecorated-type)))
-  
+
   (if struct?
       (cname (case pointer-depth
                [(1)
@@ -41,13 +41,9 @@
                                "-pointer/null")]
                [(0) (resolve-alias)]
                [else "pointer"]))
-      ; Wrap pointer declarations equal to the number of '*'s
-      (for/fold ([sig (cname undecorated-type)])
-                ([i (in-range pointer-depth)])
-        (define ptrtype `(_cpointer/null ,sig))
-        (if (member ptrtype '((_cpointer/null _int8) (_cpointer/null _char)))
-            '_bytes/nul-terminated
-            ptrtype))))
+      (if (> pointer-depth 0)
+          '_pointer
+          (cname undecorated-type))))
 
 (module+ test
   (test-equal? "No pointers"
@@ -55,10 +51,10 @@
                '_char)
   (test-equal? "Depth = 1"
                (infer-type "void" '(#\1 #\* #\f))
-               '(_cpointer/null _void))
+               '_pointer)
   (test-equal? "Depth = 2, mixed chars"
                (infer-type "int" '(#\1 #\* #\*))
-               '(_cpointer/null (_cpointer/null _int)))
+               '_pointer)
   (test-equal? "Special case: Struct name"
                (infer-type "ST" '() '#hash(("ST" . (type ((category "struct"))))))
                '_ST)
@@ -67,9 +63,4 @@
                '_ST-pointer/null)
   (test-equal? "Special case: Struct name, Depth = 2"
                (infer-type "ST" '(#\* #\*) '#hash(("ST" . (type ((category "struct"))))))
-               '_pointer)
-  (test-case "Special case: char*"
-    (check-equal? (infer-type "char" '(#\*))
-                  '_bytes/nul-terminated)
-    (check-equal? (infer-type "char" '(#\* #\*))
-                 '(_cpointer/null _bytes/nul-terminated))))
+               '_pointer))
