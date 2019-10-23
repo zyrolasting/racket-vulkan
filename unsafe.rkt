@@ -56,6 +56,13 @@
 
 (define VK_API_VERSION_1_0 (VK_MAKE_VERSION 1 0 0))
 (define VK_API_VERSION_1_1 (VK_MAKE_VERSION 1 1 0))
+
+(define (VK_VERSION_MAJOR v)
+  (arithmetic-shift v -22))
+(define (VK_VERSION_MINOR v)
+  (bitwise-and (arithmetic-shift v -12) #x3ff))
+(define (VK_VERSION_PATCH v)
+  (bitwise-and v #xfff))
 (define _uint16_t _uint16)
 (define _uint64_t _uint64)
 (define _char _sbyte)
