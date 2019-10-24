@@ -15,15 +15,12 @@
 (define-runtime-path here ".")
 
 (module+ main
-  (write-module-out (generate-vulkan-bindings (get-vulkan-spec 'local))))
+  (genmod/local))
 
 (module+ genmod
   (call-with-output-file #:exists 'replace
     (build-path here "unsafe.rkt")
-    (λ (port)
-      (write-module-out (generate-vulkan-bindings (get-vulkan-spec 'local))
-                        port))))
-
+    genmod/local))
 
 ;;-----------------------------------------------------------------------------------
 ;; Implementation
@@ -47,6 +44,10 @@
       (λ (in) (copy-port in out)))
     (for ([sig signatures])
       (writeln sig))))
+
+(define (genmod/local [out (current-output-port)])
+  (write-module-out (generate-vulkan-bindings (get-vulkan-spec 'local))
+                    out))
 
 
 ;; -------------------------------------------------------------
