@@ -26,7 +26,8 @@
 ;; Implementation
 ;; Registry guide: https://www.khronos.org/registry/vulkan/specs/1.1/registry.html
 
-(require racket/port
+(require racket/hash
+         racket/port
          racket/string
          "./private/c-analysis.rkt"         ; For building predicates on C text.
          "./private/curation.rkt"           ; For making the registry easier to process.
@@ -336,9 +337,95 @@
 ;; Enumerations are related by <type> and <enums> elements. Some
 ;; <enums> elements are a list of #defines. Others are actual C enums.
 ;; This is the case that generates actual C enums.
+(define collect-extensions-by-enum-name
+  (simple-memo (λ (registry)
+                 (foldl (λ (extension result)
+                          (foldl (λ (enumerant collecting-enumerants)
+                                   (hash-set collecting-enumerants
+                                             (attr-ref enumerant 'name)
+                                             extension))
+                                 result
+                                 (or (find-all-by-tag 'enum extension)
+                                     '())))
+                        #hash()
+                        (find-all-by-tag 'extension registry)))))
+
+
+(define (collect-enumerants-by-name where)
+  (foldl (λ (enum result)
+           (if (attrs-have-key? enum 'name)
+               (hash-set result (attr-ref enum 'name) enum)
+               result))
+         #hash()
+         (find-all-by-tag 'enum where)))
+
+(define collect-enumerants-by-name/all
+  (simple-memo collect-enumerants-by-name))
+(define collect-enumerants-by-name/core
+  (simple-memo (λ (registry)
+                 (collect-enumerants-by-name
+                  (find-first-by-tag 'enums registry)))))
+(define collect-enumerants-by-name/features
+  (simple-memo (λ (registry)
+                 (apply hash-union
+                  (map collect-enumerants-by-name (find-all-by-tag 'feature registry))))))
+
+(define collect-enumerant-name-counts
+  (simple-memo (λ (registry)
+                 (foldl (λ (enum result)
+                          (if (attrs-have-key? enum 'name)
+                              (hash-set result
+                                        (attr-ref enum 'name)
+                                        (add1 (hash-ref result (attr-ref enum 'name) 0)))
+                              result))
+                        #hash()
+                        (find-all-by-tag 'enum registry)))))
+
+(define collect-enumerant-relationships
+  (simple-memo
+   (λ (registry)
+     (foldl (λ (x res)
+              (hash-set res
+                        (attr-ref x 'extends)
+                        (cons x (hash-ref res (attr-ref x 'extends) '()))))
+            #hash()
+            (findf*-txexpr
+             registry
+             (λ (x) (and (tag=? 'enum x)
+                         (attrs-have-key? x 'extends))))))))
+
 
 (define (generate-enum-signature enum-xexpr registry [lookup #hash()])
   (define name (get-type-name enum-xexpr))
+  (define extension-lookup (collect-extensions-by-enum-name registry))
+  (define enum-lookup (collect-enumerants-by-name/all registry))
+  (define enum-lookup/core (collect-enumerants-by-name/core registry))
+  (define enum-lookup/features (collect-enumerants-by-name/features registry))
+  (define relationship-lookup (collect-enumerant-relationships registry))
+  (define name-counts (collect-enumerant-name-counts registry))
+
+  (define (belongs-to-extension? name)
+    (hash-has-key? extension-lookup name))
+
+  ; Some enumerants have values computed in terms of enum ranges in other extensions.
+  ; The spec covers how to compute these values.
+  ; https://www.khronos.org/registry/vulkan/specs/1.1/styleguide.html#_assigning_extension_token_values
+  (define (find-extension-relative-value enumerant)
+    ; In English: First try to get the "extnumber" attribute value on
+    ; the enumerant. Failing that, find the <extension> element that
+    ; has the enumerant as a descendent and grab its "number"
+    ; attribute value
+    (define ext-number
+      (string->number
+       (attr-ref enumerant 'extnumber
+                 (λ _ (attr-ref
+                       (hash-ref extension-lookup (attr-ref enumerant 'name))
+                       'number)))))
+
+    (define base-value 1000000000)
+    (define range-size 1000)
+    (define offset (string->number (attr-ref enumerant 'offset)))
+    (+ base-value (* (- ext-number 1) range-size) offset))
 
   ; Empty enums are possible.
   ; https://github.com/KhronosGroup/Vulkan-Docs/issues/1060
@@ -347,47 +434,68 @@
                               (λ _ '(enums))))
 
   ; Some enumerants are an alias for another enumerant.
-  ; Often times the original is in the same enumeration,
-  ; but that isn't explicitly guarenteed. So I search the
-  ; registry for the original each time.
   (define (resolve-alias enumerant)
     (define alias (attr-ref enumerant 'alias))
     (attr-set
-     (findf-txexpr registry
-                  (λ (x)
-                    (and (tag=? 'enum x)
-                         (equal? (attr-ref x 'name "")
-                                 alias))))
+     (hash-ref enum-lookup alias)
      'name
      (attr-ref enumerant 'name)))
 
   ; Pull out the intended (assumed numerical) value
-  ; from the enumerant. Extensions have enumerants
-  ; with string values, which will need to be handled
-  ; separately.
+  ; from the enumerant.
   (define (extract-value enumerant)
     (if (attrs-have-key? enumerant 'alias)
         (extract-value (resolve-alias enumerant))
-        (if (attrs-have-key? enumerant 'bitpos)
-            (arithmetic-shift 1 (sub1 (string->number (attr-ref enumerant 'bitpos))))
-            (let ([val (attr-ref enumerant 'value "999")])
-              (when (equal? val "999")
-                (displayln enumerant))
-              (if (string-prefix? val "0x")
-                  (string->number (string-replace val "0x" "") 16)
-                  (string->number val))))))
+        (if (attrs-have-key? enumerant 'offset)
+            (find-extension-relative-value enumerant)
+            (let ([n (if (attrs-have-key? enumerant 'bitpos)
+                         (arithmetic-shift 1 (sub1 (string->number (attr-ref enumerant 'bitpos))))
+                         (let ([val (attr-ref enumerant 'value)])
+                           (if (string-prefix? val "0x")
+                               (string->number (string-replace val "0x" "") 16)
+                               (string->number val))))])
+              (if (equal? "-" (attr-ref enumerant 'dir #f))
+                  (* -1 n)
+                  n)))))
+
+  ; Find the enumerants that extend this type.
+  (define extensions
+    (hash-ref relationship-lookup
+              name
+              (λ _ '())))
+
+  ; HACK: For now, ignore the extension enums that duplicate definitions.
+  (define deduped
+    (filter
+     (λ (x)
+       (<= (hash-ref name-counts (attr-ref x 'name) 0)
+           1))
+     extensions))
+
+  (define enumerants (append
+                      (filter (λ (x) (tag=? 'enum x))
+                              (get-elements enum-decl))
+                      deduped))
 
   ; Pair up enumerant names and values.
   (define pairs (reverse (map (λ (x) (cons (attr-ref x 'name)
                                            (extract-value x)))
-                              (filter (λ (x) (tag=? 'enum x))
-                                      (get-elements enum-decl)))))
+                              enumerants)))
 
   ; To be nice to Racketeers, let's give them easy flags when
   ; using Vulkan so they don't have to OR things together themselves.
   (define ctype (if (equal? "bitmask" (attr-ref enum-decl 'type ""))
                     '_bitmask
                     '_enum))
+
+  ; _enum or _bitmask need a basetype to match how the values are used.
+  ; https://docs.racket-lang.org/foreign/Enumerations_and_Masks.html?q=_enum#%28def._%28%28lib._ffi%2Funsafe..rkt%29.__enum%29%29
+  (define basetype
+    (if (equal? ctype '_enum)
+        (if (ormap (λ (pair) (< (cdr pair) 0)) pairs)
+            '_fixint
+            '_ufixint)
+        '_uint))
 
   `(begin
      (define ,(cname name)
@@ -398,7 +506,8 @@
             (define w/value (cons (cdr enumerant) decls))
             (define w/= (cons '= w/value))
             (define w/all (cons (string->symbol (car enumerant)) w/=))
-            w/all)))
+            w/all)
+        ,basetype))
      . ,(for/list ([enumerant (in-list (reverse pairs))])
           `(define ,(string->symbol (car enumerant)) ,(cdr enumerant)))))
 
@@ -431,7 +540,8 @@
                    VK_BLEND_OP_SUBTRACT = 1
                    VK_BLEND_OP_REVERSE_SUBTRACT = 2
                    VK_BLEND_OP_MIN = 3
-                   VK_BLEND_OP_MAX = 4)))
+                   VK_BLEND_OP_MAX = 4)
+                 _ufixint))
           (define VK_BLEND_OP_ADD 0)
           (define VK_SHIMMED 1)
           (define VK_BLEND_OP_SUBTRACT 1)
@@ -442,7 +552,7 @@
     (check-equal?
      (generate-enum-signature '(type ((category "enum") (name "NotPresent")))
                               enum-registry)
-     '(begin (define _NotPresent (_enum '()))))
+     '(begin (define _NotPresent (_enum '() _ufixint))))
 
     (check-equal?
      (generate-enum-signature '(type ((category "enum") (name "VkShaderStageFlagBits")))
@@ -456,7 +566,8 @@
                       VK_SHADER_STAGE_FRAGMENT_BIT = 8
                       VK_SHADER_STAGE_COMPUTE_BIT = 16
                       VK_SHADER_STAGE_ALL_GRAPHICS = 31
-                      VK_SHADER_STAGE_ALL = 2147483647)))
+                      VK_SHADER_STAGE_ALL = 2147483647)
+                    _uint))
         (define VK_SHADER_STAGE_VERTEX_BIT 0)
         (define VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT 1)
         (define VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT 2)
