@@ -242,10 +242,11 @@
                              _VkDebugReportCallbackCreateInfoEXT-pointer))
   (define drcci (ptr-ref drcci/p _VkDebugReportCallbackCreateInfoEXT))
   (set-VkDebugReportCallbackCreateInfoEXT-sType! drcci 'VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT)
-  (set-VkDebugReportCallbackCreateInfoEXT-flags! drcci '(VK_DEBUG_REPORT_ERROR_BIT_EXT
-                                                         VK_DEBUG_REPORT_WARNING_BIT_EXT
-                                                         VK_DEBUG_REPORT_INFORMATION_BIT_EXT
-                                                         VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT))
+  (set-VkDebugReportCallbackCreateInfoEXT-flags! drcci (bitwise-ior
+                                                        VK_DEBUG_REPORT_ERROR_BIT_EXT
+                                                        VK_DEBUG_REPORT_WARNING_BIT_EXT
+                                                        VK_DEBUG_REPORT_INFORMATION_BIT_EXT
+                                                        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT))
   (set-VkDebugReportCallbackCreateInfoEXT-pfnCallback! drcci (function-ptr
                                                               debug-report-callback
                                                               _PFN_vkDebugReportCallbackEXT))
