@@ -314,13 +314,13 @@
 
 (define (generate-handle-signature handle-xexpr [registry #f] [lookup #hash()])
   (define name (get-type-name handle-xexpr))
-  `(define ,(cname name) (_cpointer ',(string->symbol (string-append name "_T")))))
+  `(define ,(cname name) (_cpointer/null ',(string->symbol (string-append name "_T")))))
 
 (module+ test
   (test-equal? "(generate-handle-signature)"
                (generate-handle-signature '(type ((category "handle"))
                                                  "MAKE_HANDLE(" (name "VkDevice") ")"))
-               '(define _VkDevice (_cpointer 'VkDevice_T))))
+               '(define _VkDevice (_cpointer/null 'VkDevice_T))))
 
 
 ;; ------------------------------------------------------------------
