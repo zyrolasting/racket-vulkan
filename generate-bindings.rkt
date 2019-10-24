@@ -288,15 +288,15 @@
                  (generate-struct-signature example-struct-xexpr)
                  `(define-cstruct _VkDeviceCreateInfo
                     ((sType _VkStructureType)
-                     (pNext (_cpointer/null _void))
+                     (pNext _pointer)
                      (flags _VkDeviceCreateFlags)
                      (queueCreateInfoCount _uint32_t)
-                     (pQueueCreateInfos (_cpointer/null _VkDeviceQueueCreateInfo))
+                     (pQueueCreateInfos _pointer)
                      (enabledLayerCount _uint32_t)
-                     (ppEnabledLayerNames (_cpointer/null _bytes/nul-terminated))
+                     (ppEnabledLayerNames _pointer)
                      (enabledExtensionCount _uint32_t)
-                     (ppEnabledExtensionNames (_cpointer/null _bytes/nul-terminated))
-                     (pEnabledFeatures (_cpointer/null _VkPhysicalDeviceFeatures)))))
+                     (ppEnabledExtensionNames _pointer)
+                     (pEnabledFeatures _pointer))))
 
 
     (test-equal? "(generate-struct-signature): circular"
@@ -305,7 +305,7 @@
                           (name "C"))
                          (member (type "C") "* " (name "pNext"))))
                  `(define-cstruct _C
-                    ((pNext (_cpointer/null _void))))))
+                    ((pNext _pointer)))))
 
 
 ;; ------------------------------------------------------------------
@@ -593,12 +593,12 @@
                        (type "size_t") "size,"
                        (type "size_t") "alignment,"
                        (type "VkSystemAllocationScope") "allocationScope);"))
-               '(define _PFN_vkAllocationFunction (_cpointer/null (_fun (_cpointer/null _void)
+               '(define _PFN_vkAllocationFunction (_cpointer/null (_fun _pointer
                                                                         _size_t
                                                                         _size_t
                                                                         _VkSystemAllocationScope
                                                                         ->
-                                                                        (_cpointer/null _void))))))
+                                                                        _pointer)))))
 
 
 ;; ------------------------------------------------------------------
