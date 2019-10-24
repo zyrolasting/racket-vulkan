@@ -3,24 +3,33 @@
 ;---------------------------------------------------------------------------------------------------
 ; This module generates FFI bindings for Vulkan
 
-(require racket/contract)
+(require racket/contract
+         racket/list
+         racket/runtime-path)
+
 (provide
   (contract-out
     ; Return a list of datums that can be written as a Racket module.
     [generate-vulkan-bindings (-> vulkan-spec? list?)]))
 
+(define-runtime-path here ".")
+
 (module+ main
-  (require racket/list)
   (write-module-out (generate-vulkan-bindings (get-vulkan-spec 'local))))
+
+(module+ genmod
+  (call-with-output-file #:exists 'replace
+    (build-path here "unsafe.rkt")
+    (λ (port)
+      (write-module-out (generate-vulkan-bindings (get-vulkan-spec 'local))
+                        port))))
 
 
 ;;-----------------------------------------------------------------------------------
 ;; Implementation
 ;; Registry guide: https://www.khronos.org/registry/vulkan/specs/1.1/registry.html
 
-(require racket/list
-         racket/runtime-path
-         racket/port
+(require racket/port
          racket/string
          "./private/c-analysis.rkt"         ; For building predicates on C text.
          "./private/curation.rkt"           ; For making the registry easier to process.
@@ -31,7 +40,6 @@
   (require rackunit
            racket/list))
 
-(define-runtime-path here ".")
 (define (write-module-out signatures [out (current-output-port)])
   (parameterize ([current-output-port out])
     (call-with-input-file
