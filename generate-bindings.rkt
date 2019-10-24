@@ -492,12 +492,23 @@
         (compute-~0-declaration c-num-lit-string)
         basenum))
 
+  (define (extract-value enumerant)
+    (define value (attr-ref enumerant 'value))
+
+    (if (string-contains? value "\"")
+        (string->bytes/utf-8 value)
+        (let ([num-expr (c-numeric-lit->number value)])
+          (if (equal? (attr-ref enumerant 'dir #f) "-1")
+              `(* -1 ,num-expr)
+              num-expr))))
+
+
   `(begin
      . ,(map (λ (enumerant)
                `(define ,(string->symbol (attr-ref enumerant 'name))
                   ,(if (attrs-have-key? enumerant 'alias)
                        (string->symbol (attr-ref enumerant 'alias))
-                       (c-numeric-lit->number (attr-ref enumerant 'value)))))
+                       (extract-value enumerant))))
              (filter (λ (x) (tag=? 'enum x))
                      (get-elements enum-xexpr)))))
 
@@ -508,6 +519,7 @@
                         (enum ((value "(~0ULL-2)") (name "B")))
                         (enum ((value "(~0L)") (name "C")))
                         (enum ((value "256") (name "D")))
+                        (enum ((value "(~0UL)") (dir "-1") (name "N")))
                         (enum ((name "E") (alias "C")))))
                '(begin
                   (define A
@@ -520,6 +532,10 @@
                     (- (integer-bytes->integer (make-bytes (ctype-sizeof _long) 255) #f)
                        0))
                   (define D 256)
+                  (define N
+                    (* -1
+                       (- (integer-bytes->integer (make-bytes (ctype-sizeof _long) 255) #t)
+                          0)))
                   (define E C))))
 
 

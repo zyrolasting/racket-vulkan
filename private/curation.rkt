@@ -170,6 +170,43 @@
                      (attr-set x 'category "command")))
               commands-list))
 
+(define (find-extension-constants registry)
+  (define (accum source fetch)
+    (foldl (λ (x res)
+             (define matches (fetch x))
+             (if matches
+                 (append res matches)
+                 res))
+           '()
+           source))
+
+  (define require-elements
+    (accum
+     (find-all-by-tag 'extension registry)
+     (λ (x) (find-all-by-tag 'require x))))
+
+  (define enum-elements
+    (accum
+     require-elements
+     (λ (x) (find-all-by-tag 'enum x))))
+
+  (define extension-constants
+    (filter (λ (x) (and (attrs-have-key? x 'value)
+                        (not (attrs-have-key? x 'extends))))
+            enum-elements))
+
+  `(enums ((category "consts"))
+      . ,extension-constants))
+
+(module+ test
+  (test-equal? "(find-extension-constants)"
+               (find-extension-constants
+                '(root (extension "\n    "
+                                  (require (enum ((extends "A") (name "B")))
+                                           (enum ((name "X")))))))
+               '(enums ((category "consts")) (enum ((name "X"))))))
+
+
 ; Return declaration elements in sorted groups.
 (define (curate-registry registry)
   (define curate-types (compose sort-types
@@ -182,7 +219,8 @@
   (define curate-commands (compose categorize-commands))
 
   (define curated-declarations
-    (append (curate-types (get-tagged-children (find-first-by-tag 'types registry)))
+    (append (list (find-extension-constants registry))
+            (curate-types (get-tagged-children (find-first-by-tag 'types registry)))
             (curate-enums (find-all-by-tag 'enums registry))
             (curate-commands (get-tagged-children (find-first-by-tag 'commands registry)))))
 
