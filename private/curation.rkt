@@ -203,8 +203,8 @@
                (find-extension-constants
                 '(root (extension "\n    "
                                   (require (enum ((extends "A") (name "B")))
-                                           (enum ((name "X")))))))
-               '(enums ((category "consts")) (enum ((name "X"))))))
+                                           (enum ((name "X") (value "1")))))))
+               '(enums ((category "consts")) (enum ((name "X") (value "1"))))))
 
 
 ; Return declaration elements in sorted groups.
