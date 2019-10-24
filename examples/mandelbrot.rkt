@@ -93,11 +93,17 @@
 
   (define shader-module (create-shader-module logical-device))
 
+  (define pipeline-layout (create-pipeline-layout logical-device descriptor-set-layout/p))
+
+  (define pipeline (create-compute-pipeline logical-device shader-module pipeline-layout))
+
   (vkFreeMemory logical-device buffer-memory #f)
   (vkDestroyBuffer logical-device buffer #f)
   (vkDestroyShaderModule logical-device shader-module #f)
   (vkDestroyDescriptorPool logical-device descriptor-pool #f)
   (vkDestroyDescriptorSetLayout logical-device descriptor-set-layout #f)
+  (vkDestroyPipelineLayout logical-device pipeline-layout #f)
+  (vkDestroyPipeline logical-device pipeline #f)
   (vkDestroyDevice logical-device #f)
   (vkDestroyInstance instance #f))
 
@@ -387,7 +393,39 @@
   (vkCreateShaderModule logical-device smci/p #f compute-shader-module/p)
   (ptr-ref compute-shader-module/p _VkShaderModule))
 
+(define (create-pipeline-layout logical-device descriptor-set-layout/p)
+  (define plci/p (make-zero _VkPipelineLayoutCreateInfo
+                            _VkPipelineLayoutCreateInfo-pointer))
+  (define plci (ptr-ref plci/p _VkPipelineLayoutCreateInfo))
+  (set-VkPipelineLayoutCreateInfo-sType! plci 'VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO) 
+  (set-VkPipelineLayoutCreateInfo-setLayoutCount! plci 1)
+  (set-VkPipelineLayoutCreateInfo-pSetLayouts! plci descriptor-set-layout/p)
+  (define pipeline-layout/p (malloc _VkPipelineLayout 'atomic))
+  (vkCreatePipelineLayout logical-device plci/p #f pipeline-layout/p)
+  (ptr-ref pipeline-layout/p _VkPipelineLayout))
 
+(define (create-compute-pipeline logical-device shader-module pipeline-layout)
+  (define ssci/p (make-zero _VkPipelineShaderStageCreateInfo _VkPipelineShaderStageCreateInfo-pointer))
+  (define ssci (ptr-ref ssci/p _VkPipelineShaderStageCreateInfo))
+  (set-VkPipelineShaderStageCreateInfo-sType! ssci 'VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
+  (set-VkPipelineShaderStageCreateInfo-stage! ssci 'VK_SHADER_STAGE_COMPUTE_BIT)
+  (set-VkPipelineShaderStageCreateInfo-module! ssci shader-module)
+  (set-VkPipelineShaderStageCreateInfo-pName! ssci #"main")
+
+  (define pci/p (make-zero _VkComputePipelineCreateInfo _VkComputePipelineCreateInfo-pointer))
+  (define pci (ptr-ref pci/p _VkComputePipelineCreateInfo))
+  (set-VkComputePipelineCreateInfo-sType! pci 'VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO)
+  (set-VkComputePipelineCreateInfo-stage! pci ssci)
+  (set-VkComputePipelineCreateInfo-layout! pci pipeline-layout)
+
+  (define pipeline/p (malloc _VkPipeline 'atomic))
+  (vkCreateComputePipelines logical-device
+                            #f
+                            1
+                            pci/p
+                            #f
+                            pipeline/p)
+  (ptr-ref pipeline/p _VkPipeline))
 
 (define (create-instance layers extensions with-validation)
   (define appInfo (make-VkApplicationInfo 'VK_STRUCTURE_TYPE_APPLICATION_INFO
