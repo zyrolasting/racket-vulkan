@@ -367,8 +367,10 @@
                   (find-first-by-tag 'enums registry)))))
 (define collect-enumerants-by-name/features
   (simple-memo (λ (registry)
-                 (apply hash-union
-                  (map collect-enumerants-by-name (find-all-by-tag 'feature registry))))))
+                 (define hashes (map collect-enumerants-by-name (find-all-by-tag 'feature registry)))
+                 (if (empty? hashes)
+                     #hash()
+                     (apply hash-union hashes)))))
 
 (define collect-enumerant-name-counts
   (simple-memo (λ (registry)
@@ -389,10 +391,11 @@
                         (attr-ref x 'extends)
                         (cons x (hash-ref res (attr-ref x 'extends) '()))))
             #hash()
-            (findf*-txexpr
-             registry
-             (λ (x) (and (tag=? 'enum x)
-                         (attrs-have-key? x 'extends))))))))
+            (or (findf*-txexpr
+                 registry
+                 (λ (x) (and (tag=? 'enum x)
+                             (attrs-have-key? x 'extends))))
+                '())))))
 
 
 (define (generate-enum-signature enum-xexpr registry [lookup #hash()])

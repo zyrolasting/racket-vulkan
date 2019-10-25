@@ -36,7 +36,8 @@
        (equal? (attr-ref tx 'category #f) c)))
 
 (define (find-all-by-tag t tx)
-  (findf*-txexpr tx (λ (x) (tag=? t x))))
+  (or (findf*-txexpr tx (λ (x) (tag=? t x)))
+      '()))
 
 (define (find-first-by-tag t tx)
   (findf-txexpr tx (λ (x) (tag=? t x))))
