@@ -247,20 +247,21 @@
                                                         VK_DEBUG_REPORT_WARNING_BIT_EXT
                                                         VK_DEBUG_REPORT_INFORMATION_BIT_EXT
                                                         VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT))
-  (set-VkDebugReportCallbackCreateInfoEXT-pfnCallback! drcci (function-ptr
-                                                              debug-report-callback
-                                                              _PFN_vkDebugReportCallbackEXT))
+
+  (set-VkDebugReportCallbackCreateInfoEXT-pfnCallback! drcci debug-report-callback)
+
   (define create-debug-report-callback
-    (function-ptr (vkGetInstanceProcAddr instance #"vkCreateDebugReportCallbackEXT")
-                  (_cprocedure (list _VkInstance _pointer _pointer _pointer)
-                               (list _VkResult))))
+    (cast (vkGetInstanceProcAddr instance #"vkCreateDebugReportCallbackEXT")
+          _PFN_vkVoidFunction
+          (_fun  _VkInstance _pointer _pointer _pointer
+                 -> _VkResult)))
 
   (define callback/p (malloc _VkDebugReportCallbackEXT 'atomic))
   (check-vkResult (create-debug-report-callback instance
                                                 drcci/p
                                                 #f
                                                 callback/p))
-  (ptr-ref callback/p _pointer _VkDebugReportCallbackEXT))
+  (ptr-ref callback/p _VkDebugReportCallbackEXT))
 
 (define (create-buffer logical-device buffer-size)
   (define buffer-create-info/p (make-zero _VkBufferCreateInfo _VkBufferCreateInfo-pointer))
