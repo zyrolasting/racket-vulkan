@@ -715,10 +715,10 @@
                                           (string->list return-signature)
                                           lookup))
 
-  `(define ,(cname name) (_cpointer/null
-                          (_fun ,@parameter-types
-                                ->
-                                ,return-type))))
+  `(define ,(cname name)
+     (_fun ,@parameter-types
+           ->
+           ,return-type)))
 
 (module+ test
   (test-equal? "(generate-funcpointer-signature)"
@@ -729,12 +729,12 @@
                        (type "size_t") "size,"
                        (type "size_t") "alignment,"
                        (type "VkSystemAllocationScope") "allocationScope);"))
-               '(define _PFN_vkAllocationFunction (_cpointer/null (_fun _pointer
-                                                                        _size_t
-                                                                        _size_t
-                                                                        _VkSystemAllocationScope
-                                                                        ->
-                                                                        _pointer)))))
+               '(define _PFN_vkAllocationFunction (_fun _pointer
+                                                        _size_t
+                                                        _size_t
+                                                        _VkSystemAllocationScope
+                                                        ->
+                                                        _pointer))))
 
 
 ;; ------------------------------------------------------------------
