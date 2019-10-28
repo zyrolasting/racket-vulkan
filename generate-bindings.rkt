@@ -452,7 +452,7 @@
         (if (attrs-have-key? enumerant 'offset)
             (find-extension-relative-value enumerant)
             (let ([n (if (attrs-have-key? enumerant 'bitpos)
-                         (arithmetic-shift 1 (sub1 (string->number (attr-ref enumerant 'bitpos))))
+                         (arithmetic-shift 1 (string->number (attr-ref enumerant 'bitpos)))
                          (let ([val (attr-ref enumerant 'value)])
                            (if (string-prefix? val "0x")
                                (string->number (string-replace val "0x" "") 16)
@@ -562,21 +562,21 @@
                               enum-registry)
      '(begin
         (define _VkShaderStageFlagBits
-          (_bitmask '(VK_SHADER_STAGE_VERTEX_BIT = 0
-                      VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT = 1
-                      VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT = 2
-                      VK_SHADER_STAGE_GEOMETRY_BIT = 4
-                      VK_SHADER_STAGE_FRAGMENT_BIT = 8
-                      VK_SHADER_STAGE_COMPUTE_BIT = 16
+          (_bitmask '(VK_SHADER_STAGE_VERTEX_BIT = 1
+                      VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT = 2
+                      VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT = 4
+                      VK_SHADER_STAGE_GEOMETRY_BIT = 8
+                      VK_SHADER_STAGE_FRAGMENT_BIT = 16
+                      VK_SHADER_STAGE_COMPUTE_BIT = 32
                       VK_SHADER_STAGE_ALL_GRAPHICS = 31
                       VK_SHADER_STAGE_ALL = 2147483647)
                     _uint))
-        (define VK_SHADER_STAGE_VERTEX_BIT 0)
-        (define VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT 1)
-        (define VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT 2)
-        (define VK_SHADER_STAGE_GEOMETRY_BIT 4)
-        (define VK_SHADER_STAGE_FRAGMENT_BIT 8)
-        (define VK_SHADER_STAGE_COMPUTE_BIT 16)
+        (define VK_SHADER_STAGE_VERTEX_BIT 1)
+        (define VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT 2)
+        (define VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT 4)
+        (define VK_SHADER_STAGE_GEOMETRY_BIT 8)
+        (define VK_SHADER_STAGE_FRAGMENT_BIT 16)
+        (define VK_SHADER_STAGE_COMPUTE_BIT 32)
         (define VK_SHADER_STAGE_ALL_GRAPHICS 31)
         (define VK_SHADER_STAGE_ALL 2147483647)))))
 
