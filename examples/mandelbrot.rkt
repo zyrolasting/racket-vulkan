@@ -415,7 +415,6 @@
   (values descriptor-pool/p
           (ptr-ref descriptor-pool/p _VkDescriptorPool)))
 
-
 (define (create-descriptor-set logical-device descriptor-set-layout/p descriptor-pool)
   (define dsai/p (make-zero _VkDescriptorSetAllocateInfo _VkDescriptorSetAllocateInfo-pointer))
   (define dsai (ptr-ref dsai/p _VkDescriptorSetAllocateInfo))
@@ -459,7 +458,7 @@
   (define smci/p (make-zero _VkShaderModuleCreateInfo _VkShaderModuleCreateInfo-pointer))
   (define smci (ptr-ref smci/p _VkShaderModuleCreateInfo))
   (set-VkShaderModuleCreateInfo-sType! smci 'VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO)
-  (set-VkShaderModuleCreateInfo-pCode! smci (cast code _bytes (_cpointer _uint32_t)))
+  (set-VkShaderModuleCreateInfo-pCode! smci code)
   (set-VkShaderModuleCreateInfo-codeSize! smci (bytes-length code))
 
   (define compute-shader-module/p (malloc _VkShaderModule 'atomic))
@@ -531,8 +530,19 @@
   (set-VkCommandBufferBeginInfo-flags! cbbi VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
   (vkBeginCommandBuffer command-buffer cbbi/p)
 
-  (vkCmdBindPipeline command-buffer 'VK_PIPELINE_BIND_POINT_COMPUTE pipeline)
-  (vkCmdBindDescriptorSets command-buffer 'VK_PIPELINE_BIND_POINT_COMPUTE pipeline-layout 0 1 descriptor-set/p 0 #f)
+  (vkCmdBindPipeline command-buffer
+                     'VK_PIPELINE_BIND_POINT_COMPUTE
+                     pipeline)
+
+  (vkCmdBindDescriptorSets command-buffer
+                           'VK_PIPELINE_BIND_POINT_COMPUTE
+                           pipeline-layout
+                           0
+                           1
+                           descriptor-set/p
+                           0
+                           #f)
+
   (vkCmdDispatch command-buffer
                  (inexact->exact (ceiling (/ width (exact->inexact workgroup-size))))
                  (inexact->exact (ceiling (/ height (exact->inexact workgroup-size))))
@@ -546,7 +556,6 @@
   (set-VkSubmitInfo-sType! si 'VK_STRUCTURE_TYPE_SUBMIT_INFO)
   (set-VkSubmitInfo-commandBufferCount! si 1)
   (set-VkSubmitInfo-pCommandBuffers! si command-buffer/p)
-
 
   (define fence/p (malloc _VkFence 'atomic))
   (define fci/p (make-zero _VkFenceCreateInfo _VkFenceCreateInfo-pointer))
@@ -563,10 +572,10 @@
 (define (dump-bytes logical-device buffer-size buffer-memory width height)
   (define byte/p (malloc _pointer 'atomic))
   (vkMapMemory logical-device buffer-memory 0 buffer-size 0 byte/p)
-  (define pixel/p (cast byte/p _pointer _pixel-pointer))
+  (define pixel/p (ptr-ref byte/p _pixel-pointer))
 
   (define (cvt v)
-    (inexact->exact (ceiling (* 255.0 (min (max 0 v) 1)))))
+    (inexact->exact (truncate (* 255.0 v))))
 
   (call-with-output-file
     #:exists 'replace
