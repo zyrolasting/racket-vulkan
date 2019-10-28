@@ -65,7 +65,7 @@
   (define extensions (get-extensions with-validation))
   (define instance (create-instance layers extensions with-validation))
 
-  (when with-validation
+  #;(when with-validation
     (register-debug-callback instance))
 
   (define physical-device (find-physical-device instance))
@@ -75,6 +75,7 @@
 
   (define width 3200)
   (define height 2400)
+  (define workgroup-size 32)
   (define buffer-size (* (ctype-sizeof _pixel) width height))
   (define buffer (create-buffer logical-device buffer-size))
 
@@ -92,10 +93,25 @@
     (create-descriptor-set logical-device descriptor-set-layout/p descriptor-pool))
 
   (define shader-module (create-shader-module logical-device))
-
   (define pipeline-layout (create-pipeline-layout logical-device descriptor-set-layout/p))
-
   (define pipeline (create-compute-pipeline logical-device shader-module pipeline-layout))
+  (define command-pool (create-command-pool logical-device queue-family-index))
+  (define-values (command-buffer/p command-buffer)
+    (create-command-buffer logical-device command-pool))
+
+  (record-commands command-buffer
+                   pipeline
+                   pipeline-layout
+                   descriptor-set/p
+                   width
+                   height
+                   workgroup-size)
+
+  (run-command-buffer logical-device
+                      queue
+                      command-buffer/p)
+
+  (dump-bytes buffer-size buffer-memory)
 
   (vkFreeMemory logical-device buffer-memory #f)
   (vkDestroyBuffer logical-device buffer #f)
@@ -104,6 +120,7 @@
   (vkDestroyDescriptorSetLayout logical-device descriptor-set-layout #f)
   (vkDestroyPipelineLayout logical-device pipeline-layout #f)
   (vkDestroyPipeline logical-device pipeline #f)
+  (vkDestroyCommandPool logical-device command-pool #f)
   (vkDestroyDevice logical-device #f)
   (vkDestroyInstance instance #f))
 
@@ -114,7 +131,7 @@
   (define layer-properties/p (malloc (* layer-count (ctype-sizeof _VkLayerProperties)) 'atomic))
   (vkEnumerateInstanceLayerProperties layer-count/p layer-properties/p)
 
-  (define validation-layer-name #"VK_LAYER_LUNARG_standard_validation")
+  (define validation-layer-name #"VK_LAYER_KHRONOS_validation")
   (define (validation-layer-supported?)
     (for/fold ([support #f])
               ([offset (in-range layer-count)])
@@ -250,13 +267,16 @@
 
   (set-VkDebugReportCallbackCreateInfoEXT-pfnCallback! drcci debug-report-callback)
 
+  (define addr (vkGetInstanceProcAddr instance #"vkCreateDebugReportCallbackEXT"))
   (define create-debug-report-callback
-    (cast (vkGetInstanceProcAddr instance #"vkCreateDebugReportCallbackEXT")
+    (cast addr
           _PFN_vkVoidFunction
-          (_fun  _VkInstance _pointer _pointer _pointer
+          (_fun  _VkInstance
+                 _VkDebugReportCallbackCreateInfoEXT-pointer
+                 _pointer _pointer
                  -> _VkResult)))
 
-  (define callback/p (malloc _VkDebugReportCallbackEXT 'atomic))
+  (define callback/p (malloc _PFN_vkVoidFunction 'atomic)) 
   (check-vkResult (create-debug-report-callback instance
                                                 drcci/p
                                                 #f
@@ -374,21 +394,15 @@
 (define-runtime-path here ".")
 (define (create-shader-module logical-device)
   (define (read-file)
-    (define byte-content
-      (call-with-input-file
-        (build-path here "comp.spv")
-        (λ (port) (port->bytes port #:close? #f))))
-    (bytes-append byte-content
-                  (make-bytes
-                   (modulo (bytes-length byte-content)
-                           4)
-                   0)))
+    (call-with-input-file
+      (build-path here "comp.spv")
+      (λ (port) (port->bytes port #:close? #f))))
 
   (define code (read-file))
   (define smci/p (make-zero _VkShaderModuleCreateInfo _VkShaderModuleCreateInfo-pointer))
   (define smci (ptr-ref smci/p _VkShaderModuleCreateInfo))
   (set-VkShaderModuleCreateInfo-sType! smci 'VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO)
-  (set-VkShaderModuleCreateInfo-pCode! smci code)
+  (set-VkShaderModuleCreateInfo-pCode! smci (cast code _bytes (_cpointer _uint32_t)))
   (set-VkShaderModuleCreateInfo-codeSize! smci (bytes-length code))
 
   (define compute-shader-module/p (malloc _VkShaderModule 'atomic))
@@ -429,6 +443,86 @@
                             pipeline/p)
   (ptr-ref pipeline/p _VkPipeline))
 
+(define (create-command-pool logical-device queue-family-index)
+  (define cpci/p (make-zero _VkCommandPoolCreateInfo _VkCommandPoolCreateInfo-pointer))
+  (define cpci (ptr-ref cpci/p _VkCommandPoolCreateInfo))
+  (set-VkCommandPoolCreateInfo-sType! cpci 'VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO)
+  (set-VkCommandPoolCreateInfo-flags! cpci 0)
+  (set-VkCommandPoolCreateInfo-sType! cpci queue-family-index)
+
+  (define command-pool/p (malloc _VkCommandPool 'atomic))
+  (vkCreateCommandPool logical-device cpci/p #f command-pool/p)
+  (ptr-ref command-pool/p _VkCommandPool))
+  
+
+(define (create-command-buffer logical-device command-pool)
+  (define cbai/p (make-zero _VkCommandBufferAllocateInfo _VkCommandBufferAllocateInfo-pointer))
+  (define cbai (ptr-ref cbai/p _VkCommandBufferAllocateInfo))
+  (set-VkCommandBufferAllocateInfo-sType! cbai 'VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO)
+  (set-VkCommandBufferAllocateInfo-commandPool! cbai command-pool)
+  (set-VkCommandBufferAllocateInfo-level! cbai 'VK_COMMAND_LEVEL_PRIMARY)
+  (set-VkCommandBufferAllocateInfo-commandBufferCount! 1)
+  (define command-buffer/p (malloc _VkCommandBuffer 'atomic))
+  (vkAllocateCommandBuffers logical-device cbai/p command-buffer/p)
+  (values command-buffer/p
+          (ptr-ref command-buffer/p _VkCommandBuffer))
+
+
+(define (record-commands command-buffer pipeline pipeline-layout descriptor-set/p width height workgroup-size)
+  (define cbbi/p (make-zero _VkCommandBufferBeginInfo _VkCommandBufferBeginInfo-pointer))
+  (define cbbi (ptr-ref cbbi/p _VkCommandBufferBeginInfo))
+  (set-VkCommandBufferBeginInfo-sType! cbbi 'VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO)
+  (set-VkCommandBufferBeginInfo-flags! cbbi VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
+  (vkBeginCommandBuffer command-buffer cbbi/p)
+
+  (vkCmdBindPipeline command-buffer 'VK_PIPELINE_BIND_POINT_COMPUTE pipeline)
+  (vkCmdBindDescriptorSets command-buffer 'VK_PIPELINE_BIND_POINT_COMPUTE pipeline-layout 0 1 descriptor-set/p 0 #f)
+  (vkCmdDispatch command-buffer (ceiling (/ width (exact->inexact workgroup-size)))
+                 (ceiling (/ height (exact->inexact workgroup-size)))
+                 1)
+
+  (vkEndCommandBuffer command-buffer))
+
+(define (run-command-buffer logical-device queue command-buffer/p)
+  (define si/p (make-zero _VkSubmitInfo _VkSubmitInfo-pointer))
+  (define si (ptr-ref _VkSubmitInfo si/p))
+  (set-VkSubmitInfo-commandBufferCount! si 1)
+  (set-VkSubmitInfo-pCommandBuffers si command-buffer/p)
+
+
+  (define fence/p (malloc _VkFence 'atomic))
+  (define fci/p (make-zero _VkFenceCreateInfo _VkFenceCreateInfo-pointer))
+  (define fci (ptr-ref fci/p _VkFence))
+  (set-VkFenceCreateInfo-sType! fci 'VK_STRUCTURE_TYPE_FENCE_CREATE_INFO)
+  (set-VkFenceCreateInfo-flags! fci 0)
+  (vkCreateFence logical-device fci/p #f fence/p)
+  (define fence (ptr-ref fence/p _VkFence))
+
+  (vkQueueSubmit queue 1 si/p fence)
+  (vkWaitForFences logical-device 1 fence/p VK_TRUE #e1e8)
+  (vkDestroyFence logical-device fence #f))
+
+(define (dump-bytes logical-device buffer-size buffer-memory)
+  (define byte/p (malloc _pointer 'atomic))
+  (vkMapMemory logical-device buffer-memory 0 buffer-size 0 byte/p)
+  (define pixel/p (cast byte/p _pointer _pixel-pointer))
+
+  (define (cvt v) (inexact->exact (* 255.0 v)))
+
+  (call-with-output-file
+    (build-path here "mandelbrot.bin")
+    (λ (port)
+      (for ([i (in-range buffer-size)])
+        (define pixel (ptr-ref pixel/p _pixel i))
+        (define r (cvt (pixel-r pixel)))
+        (define g (cvt (pixel-g pixel)))
+        (define b (cvt (pixel-b pixel)))
+        (define a (cvt (pixel-a pixel)))
+        (TODO))))
+
+  (vkUnmapMemory logical-device buffer-memory))
+    
+
 (define (create-instance layers extensions with-validation)
   (define appInfo (make-VkApplicationInfo 'VK_STRUCTURE_TYPE_APPLICATION_INFO
                                           #f
@@ -452,7 +546,6 @@
           (λ (p) (vkCreateInstance instinfo
                                    #f
                                    p))))
-
 
 
 (define (find-physical-device instance)

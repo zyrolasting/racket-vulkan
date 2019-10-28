@@ -1012,7 +1012,7 @@
 (define-vulkan vkDestroyInstance (_fun _VkInstance _pointer -> _void))
 (define-vulkan vkEnumeratePhysicalDevices (_fun _VkInstance _pointer _pointer -> (r : _VkResult) -> (check-vkResult r (quote vkEnumeratePhysicalDevices))))
 (define-vulkan vkGetDeviceProcAddr (_fun _VkDevice _pointer -> (r : _PFN_vkVoidFunction)))
-(define-vulkan vkGetInstanceProcAddr (_fun _VkInstance _pointer -> (r : _PFN_vkVoidFunction)))
+(define-vulkan vkGetInstanceProcAddr (_fun _VkInstance _bytes/nul-terminated -> (r : _PFN_vkVoidFunction)))
 (define-vulkan vkGetPhysicalDeviceProperties (_fun _VkPhysicalDevice _pointer -> _void))
 (define-vulkan vkGetPhysicalDeviceQueueFamilyProperties (_fun _VkPhysicalDevice _pointer _pointer -> _void))
 (define-vulkan vkGetPhysicalDeviceMemoryProperties (_fun _VkPhysicalDevice _pointer -> _void))
