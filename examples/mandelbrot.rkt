@@ -113,7 +113,7 @@
                       queue
                       command-buffer/p)
 
-  (dump-bytes buffer-size buffer-memory)
+  (dump-bytes logical-device buffer-size buffer-memory width height)
 
   (vkFreeMemory logical-device buffer-memory #f)
   (vkDestroyBuffer logical-device buffer #f)
@@ -386,7 +386,7 @@
 
   (define dslci/p (make-zero _VkDescriptorSetLayoutCreateInfo
                              _VkDescriptorSetLayoutCreateInfo-pointer))
-  (define dslci (ptr-ref dslb/p _VkDescriptorSetLayoutCreateInfo))
+  (define dslci (ptr-ref dslci/p _VkDescriptorSetLayoutCreateInfo))
   (set-VkDescriptorSetLayoutCreateInfo-sType! dslci 'VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
   (set-VkDescriptorSetLayoutCreateInfo-bindingCount! dslci 1)
   (set-VkDescriptorSetLayoutCreateInfo-pBindings! dslci dslb/p)
@@ -505,7 +505,7 @@
   (define cpci (ptr-ref cpci/p _VkCommandPoolCreateInfo))
   (set-VkCommandPoolCreateInfo-sType! cpci 'VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO)
   (set-VkCommandPoolCreateInfo-flags! cpci 0)
-  (set-VkCommandPoolCreateInfo-sType! cpci queue-family-index)
+  (set-VkCommandPoolCreateInfo-queueFamilyIndex! cpci queue-family-index)
 
   (define command-pool/p (malloc _VkCommandPool 'atomic))
   (vkCreateCommandPool logical-device cpci/p #f command-pool/p)
@@ -517,8 +517,8 @@
   (define cbai (ptr-ref cbai/p _VkCommandBufferAllocateInfo))
   (set-VkCommandBufferAllocateInfo-sType! cbai 'VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO)
   (set-VkCommandBufferAllocateInfo-commandPool! cbai command-pool)
-  (set-VkCommandBufferAllocateInfo-level! cbai 'VK_COMMAND_LEVEL_PRIMARY)
-  (set-VkCommandBufferAllocateInfo-commandBufferCount! 1)
+  (set-VkCommandBufferAllocateInfo-level! cbai 'VK_COMMAND_BUFFER_LEVEL_PRIMARY)
+  (set-VkCommandBufferAllocateInfo-commandBufferCount! cbai 1)
   (define command-buffer/p (malloc _VkCommandBuffer 'atomic))
   (vkAllocateCommandBuffers logical-device cbai/p command-buffer/p)
   (values command-buffer/p
@@ -533,22 +533,24 @@
 
   (vkCmdBindPipeline command-buffer 'VK_PIPELINE_BIND_POINT_COMPUTE pipeline)
   (vkCmdBindDescriptorSets command-buffer 'VK_PIPELINE_BIND_POINT_COMPUTE pipeline-layout 0 1 descriptor-set/p 0 #f)
-  (vkCmdDispatch command-buffer (ceiling (/ width (exact->inexact workgroup-size)))
-                 (ceiling (/ height (exact->inexact workgroup-size)))
+  (vkCmdDispatch command-buffer
+                 (inexact->exact (ceiling (/ width (exact->inexact workgroup-size))))
+                 (inexact->exact (ceiling (/ height (exact->inexact workgroup-size))))
                  1)
 
   (vkEndCommandBuffer command-buffer))
 
 (define (run-command-buffer logical-device queue command-buffer/p)
   (define si/p (make-zero _VkSubmitInfo _VkSubmitInfo-pointer))
-  (define si (ptr-ref _VkSubmitInfo si/p))
+  (define si (ptr-ref si/p _VkSubmitInfo))
+  (set-VkSubmitInfo-sType! si 'VK_STRUCTURE_TYPE_SUBMIT_INFO)
   (set-VkSubmitInfo-commandBufferCount! si 1)
   (set-VkSubmitInfo-pCommandBuffers! si command-buffer/p)
 
 
   (define fence/p (malloc _VkFence 'atomic))
   (define fci/p (make-zero _VkFenceCreateInfo _VkFenceCreateInfo-pointer))
-  (define fci (ptr-ref fci/p _VkFence))
+  (define fci (ptr-ref fci/p _VkFenceCreateInfo))
   (set-VkFenceCreateInfo-sType! fci 'VK_STRUCTURE_TYPE_FENCE_CREATE_INFO)
   (set-VkFenceCreateInfo-flags! fci 0)
   (vkCreateFence logical-device fci/p #f fence/p)
@@ -558,17 +560,19 @@
   (vkWaitForFences logical-device 1 fence/p VK_TRUE #e1e8)
   (vkDestroyFence logical-device fence #f))
 
-(define (dump-bytes logical-device buffer-size buffer-memory)
+(define (dump-bytes logical-device buffer-size buffer-memory width height)
   (define byte/p (malloc _pointer 'atomic))
   (vkMapMemory logical-device buffer-memory 0 buffer-size 0 byte/p)
   (define pixel/p (cast byte/p _pointer _pixel-pointer))
 
-  (define (cvt v) (inexact->exact (* 255.0 v)))
+  (define (cvt v)
+    (inexact->exact (ceiling (* 255.0 (min (max 0 v) 1)))))
 
   (call-with-output-file
+    #:exists 'replace
     (build-path here "mandelbrot.bin")
     (λ (port)
-      (for ([i (in-range buffer-size)])
+      (for ([i (in-range (* width height))])
         (define pixel (ptr-ref pixel/p _pixel i))
         (write-byte (cvt (pixel-r pixel)) port)
         (write-byte (cvt (pixel-g pixel)) port)
