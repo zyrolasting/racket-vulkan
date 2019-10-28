@@ -92,6 +92,8 @@
   (define-values (descriptor-set/p descriptor-set)
     (create-descriptor-set logical-device descriptor-set-layout/p descriptor-pool))
 
+  (connect-buffer-to-descriptor logical-device descriptor-set buffer-size buffer)
+
   (define shader-module (create-shader-module logical-device))
   (define pipeline-layout (create-pipeline-layout logical-device descriptor-set-layout/p))
   (define pipeline (create-compute-pipeline logical-device shader-module pipeline-layout))
@@ -174,6 +176,44 @@
   (if with-validation
       (cvector _bytes/nul-terminated debug-extension-name)
       (cvector _bytes/nul-terminated)))
+
+(define (create-instance layers extensions with-validation)
+  (define appInfo (make-VkApplicationInfo 'VK_STRUCTURE_TYPE_APPLICATION_INFO
+                                          #f
+                                          #"Mandelbrot"
+                                          0
+                                          #"mandelbroteng"
+                                          0
+                                          VK_API_VERSION_1_0))
+
+  (define instinfo (make-VkInstanceCreateInfo
+                    'VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
+                    #f
+                    0
+                    appInfo
+                    (cvector-length layers)
+                    (cvector-ptr layers)
+                    (cvector-length extensions)
+                    (cvector-ptr extensions)))
+
+  (create _VkInstance
+          (λ (p) (vkCreateInstance instinfo
+                                   #f
+                                   p))))
+
+
+(define (find-physical-device instance)
+  (define pDeviceCount (malloc _uint32_t 'atomic))
+  (vkEnumeratePhysicalDevices instance pDeviceCount #f)
+  (define num (ptr-ref pDeviceCount _uint32_t))
+  (when (= num 0)
+    (error "Expected more than zero physical devices."))
+  (define size (* num (ctype-sizeof _VkPhysicalDevice)))
+  (define physical-devices (malloc size 'atomic))
+  (vkEnumeratePhysicalDevices instance pDeviceCount physical-devices)
+  (define first-device (ptr-ref physical-devices _VkPhysicalDevice 0))
+  (printf "Assuming first device is good enough.~n")
+  first-device)
 
 
 (define (get-queue logical-device queue-family-index)
@@ -276,7 +316,7 @@
                  _pointer _pointer
                  -> _VkResult)))
 
-  (define callback/p (malloc _PFN_vkVoidFunction 'atomic)) 
+  (define callback/p (malloc _PFN_vkVoidFunction 'atomic))
   (check-vkResult (create-debug-report-callback instance
                                                 drcci/p
                                                 #f
@@ -328,11 +368,9 @@
                                               (VkMemoryRequirements-memoryTypeBits memory-requirements)
                                               (bitwise-ior VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
                                                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)))
-
   (define buffer-memory/p (malloc _VkDeviceMemory 'atomic))
   (vkAllocateMemory logical-device memory-alloc-info/p #f buffer-memory/p)
   (define buffer-memory (ptr-ref buffer-memory/p _VkDeviceMemory))
-
   (vkBindBufferMemory logical-device buffer buffer-memory 0)
   buffer-memory)
 
@@ -391,12 +429,31 @@
   (values descriptor-set/p
           (ptr-ref descriptor-set/p _VkDescriptorSet)))
 
+(define (connect-buffer-to-descriptor logical-device descriptor-set buffer-size buffer)
+  (define dbi/p (make-zero _VkDescriptorBufferInfo _VkDescriptorBufferInfo-pointer))
+  (define dbi (ptr-ref dbi/p _VkDescriptorBufferInfo))
+  (set-VkDescriptorBufferInfo-buffer! dbi buffer)
+  (set-VkDescriptorBufferInfo-offset! dbi 0)
+  (set-VkDescriptorBufferInfo-range! dbi buffer-size)
+
+  (define wds/p (make-zero _VkWriteDescriptorSet _VkWriteDescriptorSet-pointer))
+  (define wds (ptr-ref wds/p _VkWriteDescriptorSet))
+  (set-VkWriteDescriptorSet-sType! wds 'VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
+  (set-VkWriteDescriptorSet-dstSet! wds descriptor-set)
+  (set-VkWriteDescriptorSet-dstBinding! wds 0)
+  (set-VkWriteDescriptorSet-descriptorCount! wds 1)
+  (set-VkWriteDescriptorSet-descriptorType! wds 'VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
+  (set-VkWriteDescriptorSet-pBufferInfo! wds dbi/p)
+
+  (vkUpdateDescriptorSets logical-device 1 wds/p 0 #f))
+
 (define-runtime-path here ".")
 (define (create-shader-module logical-device)
   (define (read-file)
     (call-with-input-file
       (build-path here "comp.spv")
       (λ (port) (port->bytes port #:close? #f))))
+
 
   (define code (read-file))
   (define smci/p (make-zero _VkShaderModuleCreateInfo _VkShaderModuleCreateInfo-pointer))
@@ -413,7 +470,7 @@
   (define plci/p (make-zero _VkPipelineLayoutCreateInfo
                             _VkPipelineLayoutCreateInfo-pointer))
   (define plci (ptr-ref plci/p _VkPipelineLayoutCreateInfo))
-  (set-VkPipelineLayoutCreateInfo-sType! plci 'VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO) 
+  (set-VkPipelineLayoutCreateInfo-sType! plci 'VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
   (set-VkPipelineLayoutCreateInfo-setLayoutCount! plci 1)
   (set-VkPipelineLayoutCreateInfo-pSetLayouts! plci descriptor-set-layout/p)
   (define pipeline-layout/p (malloc _VkPipelineLayout 'atomic))
@@ -453,7 +510,7 @@
   (define command-pool/p (malloc _VkCommandPool 'atomic))
   (vkCreateCommandPool logical-device cpci/p #f command-pool/p)
   (ptr-ref command-pool/p _VkCommandPool))
-  
+
 
 (define (create-command-buffer logical-device command-pool)
   (define cbai/p (make-zero _VkCommandBufferAllocateInfo _VkCommandBufferAllocateInfo-pointer))
@@ -465,8 +522,7 @@
   (define command-buffer/p (malloc _VkCommandBuffer 'atomic))
   (vkAllocateCommandBuffers logical-device cbai/p command-buffer/p)
   (values command-buffer/p
-          (ptr-ref command-buffer/p _VkCommandBuffer))
-
+          (ptr-ref command-buffer/p _VkCommandBuffer)))
 
 (define (record-commands command-buffer pipeline pipeline-layout descriptor-set/p width height workgroup-size)
   (define cbbi/p (make-zero _VkCommandBufferBeginInfo _VkCommandBufferBeginInfo-pointer))
@@ -487,7 +543,7 @@
   (define si/p (make-zero _VkSubmitInfo _VkSubmitInfo-pointer))
   (define si (ptr-ref _VkSubmitInfo si/p))
   (set-VkSubmitInfo-commandBufferCount! si 1)
-  (set-VkSubmitInfo-pCommandBuffers si command-buffer/p)
+  (set-VkSubmitInfo-pCommandBuffers! si command-buffer/p)
 
 
   (define fence/p (malloc _VkFence 'atomic))
@@ -514,49 +570,9 @@
     (λ (port)
       (for ([i (in-range buffer-size)])
         (define pixel (ptr-ref pixel/p _pixel i))
-        (define r (cvt (pixel-r pixel)))
-        (define g (cvt (pixel-g pixel)))
-        (define b (cvt (pixel-b pixel)))
-        (define a (cvt (pixel-a pixel)))
-        (TODO))))
+        (write-byte (cvt (pixel-r pixel)) port)
+        (write-byte (cvt (pixel-g pixel)) port)
+        (write-byte (cvt (pixel-b pixel)) port)
+        (write-byte (cvt (pixel-a pixel)) port))))
 
   (vkUnmapMemory logical-device buffer-memory))
-    
-
-(define (create-instance layers extensions with-validation)
-  (define appInfo (make-VkApplicationInfo 'VK_STRUCTURE_TYPE_APPLICATION_INFO
-                                          #f
-                                          #"Mandelbrot"
-                                          0
-                                          #"mandelbroteng"
-                                          0
-                                          VK_API_VERSION_1_0))
-
-  (define instinfo (make-VkInstanceCreateInfo
-                    'VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
-                    #f
-                    0
-                    appInfo
-                    (cvector-length layers)
-                    (cvector-ptr layers)
-                    (cvector-length extensions)
-                    (cvector-ptr extensions)))
-
-  (create _VkInstance
-          (λ (p) (vkCreateInstance instinfo
-                                   #f
-                                   p))))
-
-
-(define (find-physical-device instance)
-  (define pDeviceCount (malloc _uint32_t 'atomic))
-  (vkEnumeratePhysicalDevices instance pDeviceCount #f)
-  (define num (ptr-ref pDeviceCount _uint32_t))
-  (when (= num 0)
-    (error "Expected more than zero physical devices."))
-  (define size (* num (ctype-sizeof _VkPhysicalDevice)))
-  (define physical-devices (malloc size 'atomic))
-  (vkEnumeratePhysicalDevices instance pDeviceCount physical-devices)
-  (define first-device (ptr-ref physical-devices _VkPhysicalDevice 0))
-  (printf "Assuming first device is good enough.~n")
-  first-device)
