@@ -22,7 +22,31 @@
 (define local-mirror-path (build-path registry-dir "vk.xml"))
 
 ; Run this script directly to see Vulkan spec xexpr on (current-output-port)
-(module+ main (writeln (get-vulkan-spec)))
+(module+ main
+  (require racket/cmdline)
+  (define dump?/box (box #f))
+  (define sync?/box (box #f))
+
+  (command-line
+   #:once-each
+   [("-d" "--dump")
+    "Print the Vulkan registry, in write mode, to STDOUT as an X-Expression."
+    (set-box! dump?/box #t)]
+
+   [("-s" "--sync")
+    "Download the official and current vk.xml to overwrite the local copy."
+    "Will happen before --dump, if specified."
+    (set-box! sync?/box #t)])
+
+  (define dump? (unbox dump?/box))
+  (define sync? (unbox sync?/box))
+
+  (when (and (not sync?) (not dump?))
+    (displayln "--dump or --sync not specified. Nothing to do.")
+    (exit 1))
+
+  (when sync? (update-local-mirror))
+  (when dump? (writeln (get-vulkan-spec))))
 
 
 ;---------------------------------------------------------------------------------------------------
