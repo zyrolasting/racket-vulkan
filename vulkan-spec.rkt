@@ -38,13 +38,11 @@
 
 ; Downloads Vulkan API spec from official source.
 ; Multiple versions of the API may be generated off master.
-(define/contract (source-spec-from-internet)
-  (-> input-port?)
+(define (source-spec-from-internet)
   (get-pure-port (string->url "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/master/xml/vk.xml")))
 
 ; Returns input port to a mirror of the Vulkan API spec from this package distribution.
-(define/contract (source-spec-from-local-mirror)
-  (-> input-port?)
+(define (source-spec-from-local-mirror)
   (open-input-file local-mirror-path))
 
 ; Writes network-sourced content to the local mirror.
