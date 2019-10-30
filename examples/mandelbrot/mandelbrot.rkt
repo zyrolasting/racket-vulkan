@@ -579,7 +579,7 @@
 
   (call-with-output-file
     #:exists 'replace
-    (build-path here "mandelbrot.bin")
+    (build-path here "mandelbrot.rgba")
     (λ (port)
       (for ([i (in-range (* width height))])
         (define pixel (ptr-ref pixel/p _pixel i))
