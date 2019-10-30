@@ -127,19 +127,6 @@
   (map resolve most-to-least-responsible/names))
 
 
-#;(module+ test
-  (require racket/set
-           "../vulkan-spec.rkt")
-  (test-case "(sort-types)"
-    (define registry (get-vulkan-spec 'local))
-    (define sorted (sort-types (get-tagged-children (find-first-by-tag 'types registry))))
-
-    (for/fold ([encountered (set)])
-              ([type (in-list sorted)])
-
-      (set-add encountered (get-type-name type)))))
-
-
 ;; Not all <enums> elements are actually C enumerations.
 ;; Categorize them so we know to treat them differently.
 (define (categorize-enums-that-arent enums-list)
