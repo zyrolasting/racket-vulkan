@@ -2,7 +2,7 @@
 (define collection "vulkan")
 (define deps '("base" "txexpr" "graph-lib"))
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))
-(define scribblings '(("scribblings/vulkan.scrbl" ())))
+(define scribblings '(("scribblings/vulkan.scrbl" (multi-page))))
 (define pkg-desc "Vulkan integration for Racket")
 (define version "0.0")
 (define pkg-authors '("Sage Gerard"))
