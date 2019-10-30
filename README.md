@@ -1,17 +1,5 @@
 Vulkan API integration and utilities for Racket.
 
-## How to test
-
-1. Clone this repository and use `raco pkg install --link`.
-1. Install the Vulkan SDK or runtime. Make sure the associated C
-   library appears inside one of the directories from
-   [get-lib-search-dirs][glsd]
-1. Run the unit tests using `raco test -x -p vulkan`
-1. Run `racket examples/minimal.rkt` in the repository to make sure you can create and destroy an instance.
-
-If you need to modify `unsafe.rkt`, be sure to run `raco make` on it to capture any changes.
-It takes a while to compile.
-
 ## Supporting the project
 
 I actively maintain my open source projects, and
