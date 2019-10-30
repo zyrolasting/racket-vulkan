@@ -12,6 +12,13 @@ Vulkan API integration and utilities for Racket.
 If you need to modify `unsafe.rkt`, be sure to run `raco make` on it to capture any changes.
 It takes a while to compile.
 
+## Supporting the project
+
+I actively maintain my open source projects, and
+wish to do so full-time. If you want to support unique
+software and get guarenteed response times for support, consider
+[purchasing a subscription](https://sagegerard.com/subscribe.html).
+
 ## TODO
 
 - [x] Generate Racket FFI bindings against the Vulkan 1.1 API specification.
