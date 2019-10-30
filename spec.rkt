@@ -12,7 +12,6 @@
  vulkan-spec-sources/c
  (contract-out
   [get-vulkan-spec     (-> vulkan-spec-sources/c vulkan-spec?)] ; Computes Vulkan API spec
-  [update-local-mirror (-> any/c)]                  ; Downloads stable Vulkan API spec to local mirror
   [vulkan-spec?        (-> any/c boolean?)]))       ; Returns if argument is a Vulkan specification according to this library
 
 ; Specification sources can be the local file system, or a remote system on the Internet
@@ -23,37 +22,15 @@
 (define local-mirror-path (build-path registry-dir "vk.xml"))
 
 ; Run this script directly to see Vulkan spec xexpr on (current-output-port)
-(module+ main
-  (require racket/cmdline)
-  (define dump?/box (box #f))
-  (define sync?/box (box #f))
-
-  (command-line
-   #:once-each
-   [("-d" "--dump")
-    "Print the Vulkan registry, in write mode, to STDOUT as an X-Expression."
-    (set-box! dump?/box #t)]
-
-   [("-s" "--sync")
-    "Download the official and current vk.xml to overwrite the local copy."
-    "Will happen before --dump, if specified."
-    (set-box! sync?/box #t)])
-
-  (define dump? (unbox dump?/box))
-  (define sync? (unbox sync?/box))
-
-  (when (and (not sync?) (not dump?))
-    (displayln "--dump or --sync not specified. Nothing to do.")
-    (exit 1))
-
-  (when sync? (update-local-mirror))
-  (when dump? (writeln (get-vulkan-spec))))
+(module+ main (writeln (get-vulkan-spec)))
 
 
 ;---------------------------------------------------------------------------------------------------
 ; Implementation
 
-(require net/url racket/port)
+(require racket/file
+         racket/port
+         net/url)
 
 ; TODO: Because xml does not (yet?) support DTD processing and
 ; RelaxNG is needed to generate declaration info, I'll ride
