@@ -16,8 +16,8 @@ It takes a while to compile.
 
 - [x] Generate Racket FFI bindings against the Vulkan 1.1 API specification.
 - [ ] Include RAII-equivalent resource management to reduce verbosity
-- [ ] Write a test application that generates an image and writes it to the file system
+- [x] Write a test application that generates an image and writes it to the file system
 - [ ] Write a test application that uses a GUI and swap chain to present graphics.
-- [ ] Write example applications to aid education
+- [x] Write example applications to aid education
 
 [glsd]: https://docs.racket-lang.org/raco/dirs.html#%28def._%28%28lib._setup%2Fdirs..rkt%29._get-lib-search-dirs%29%29
