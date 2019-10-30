@@ -5,7 +5,7 @@
                     ffi/unsafe
                     ffi/unsafe/define]]
 
-@title{Generating Vulkan API bindings}
+@title{Vulkan API Integration}
 @author[(author+email "Sage L. Gerard" "sage@sagegerard.com" #:obfuscate? #t)]
 
 @defmodule[vulkan]
