@@ -22,7 +22,7 @@
 (define local-mirror-path (build-path registry-dir "vk.xml"))
 
 ; Run this script directly to see Vulkan spec xexpr on (current-output-port)
-(module+ main (displayln (get-vulkan-spec)))
+(module+ main (writeln (get-vulkan-spec)))
 
 
 ;---------------------------------------------------------------------------------------------------
