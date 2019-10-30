@@ -9,13 +9,14 @@
          racket/runtime-path)
 
 (provide
-  (contract-out
-    [get-vulkan-spec     (-> sources/c vulkan-spec?)] ; Computes Vulkan API spec
-    [update-local-mirror (-> any/c)]                  ; Downloads stable Vulkan API spec to local mirror
-    [vulkan-spec?        (-> any/c boolean?)]))       ; Returns if argument is a Vulkan specification according to this library
+ vulkan-spec-sources/c
+ (contract-out
+  [get-vulkan-spec     (-> vulkan-spec-sources/c vulkan-spec?)] ; Computes Vulkan API spec
+  [update-local-mirror (-> any/c)]                  ; Downloads stable Vulkan API spec to local mirror
+  [vulkan-spec?        (-> any/c boolean?)]))       ; Returns if argument is a Vulkan specification according to this library
 
 ; Specification sources can be the local file system, or a remote system on the Internet
-(define sources/c (symbols 'local 'remote))
+(define vulkan-spec-sources/c (symbols 'local 'remote))
 
 ; What 'local implies
 (define-runtime-path registry-dir ".")
@@ -70,16 +71,21 @@
   (open-input-file local-mirror-path))
 
 ; Writes network-sourced content to the local mirror.
-(define (update-local-mirror)
-  (call-with-output-file*
-    local-mirror-path
-    #:exists 'replace
-    (lambda (port)
-      (display (port->string (source-spec-from-internet)) port))))
+(define (sync-local-mirror! proc)
+  (define backup (file->string local-mirror-path))
+  (with-handlers ([(λ _ #t)
+                   (display-to-file #:exists 'replace
+                                    backup
+                                    local-mirror-path)])
+    (call-with-output-file*
+      local-mirror-path
+      #:exists 'replace
+      (lambda (port)
+        (display (port->string (source-spec-from-internet)) port)))))
 
 ; Returns an input port given a desired source
 (define/contract (get-spec-port source)
-  (-> sources/c input-port?)
+  (-> vulkan-spec-sources/c input-port?)
   (if (eq? source 'local)
     (source-spec-from-local-mirror)
     (source-spec-from-internet)))

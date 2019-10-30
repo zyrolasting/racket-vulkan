@@ -27,6 +27,8 @@ confirm that @litchar{libvulkan.so} (Linux) or @litchar{vulkan1.dll}
 or clone the repository and install it locally as a package.}
 ]
 
+@include-section{spec.scrbl}
+
 @section{Unsafe Bindings}
 @defmodule[vulkan/unsafe]
 
