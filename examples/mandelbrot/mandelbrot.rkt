@@ -291,7 +291,7 @@
   index)
 
 (define (debug-report-callback flags objectType object location messageCode pLayerPrefix pMessage pUserData)
-  (printf "Debug Report: ~a: ~a~n" pLayerPrefix pMessage)
+  (log-info "Debug Report: ~a: ~a~n" pLayerPrefix pMessage)
   VK_FALSE)
 
 (define (register-debug-callback instance)
