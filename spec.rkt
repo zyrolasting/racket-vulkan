@@ -19,7 +19,7 @@
 
 ; What 'local implies
 (define-runtime-path registry-dir ".")
-(define local-mirror-path (build-path registry-dir "vk.xml"))
+(define local-mirror-path (build-path registry-dir "private/vk.xml"))
 
 ; Run this script directly to see Vulkan spec xexpr on (current-output-port)
 (module+ main (writeln (get-vulkan-spec)))
