@@ -6,6 +6,8 @@
 
 Vulkan® API integration and utilities for Racket.
 
+[Read the docs to get started](https://docs.racket-lang.org/vulkan/index.html?q=vulkan).
+
 ## Supporting the project
 
 I actively maintain my open source projects, and
