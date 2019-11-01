@@ -11,7 +11,7 @@
          racket/string
          graph
          "./txexpr.rkt"
-         "./c-analysis.rkt")
+         "./c.rkt")
 
 (module+ test
   (require rackunit))
