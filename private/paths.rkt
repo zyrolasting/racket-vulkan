@@ -5,5 +5,5 @@
 
 (define-runtime-path private-path ".")
 (define-runtime-path package-path "..")
-(define assets-path (build-path private-path "assets"))
+(define-runtime-path assets-path "./assets")
 
