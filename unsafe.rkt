@@ -63,6 +63,8 @@
   (bitwise-and (arithmetic-shift v -12) #x3ff))
 (define (VK_VERSION_PATCH v)
   (bitwise-and v #xfff))
+(define VK_HEADER_VERSION 126)
+(define VK_NULL_HANDLE 0)
 (define _uint16_t _uint16)
 (define _uint64_t _uint64)
 (define _char _sbyte)

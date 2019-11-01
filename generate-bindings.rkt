@@ -841,6 +841,25 @@
                         -> (check-vkResult r 'vkCreateInstance)))))
 
 
+(define (generate-define-constant-signature registry target-name)
+  (define element
+    (findf-txexpr registry
+                  (λ (x) (and (tag=? 'type x)
+                              (equal? (get-type-name x)
+                                      target-name)))))
+
+  (define constant
+    (string->number
+     (regexp-replace* #px"\\D+"
+                      (shrink-wrap-cdata element)
+                     "")))
+
+  `(define ,(string->symbol target-name) ,constant))
+
+(define (generate-define-constants registry)
+  (list (generate-define-constant-signature registry "VK_HEADER_VERSION")
+        (generate-define-constant-signature registry "VK_NULL_HANDLE")))
+
 ;; ------------------------------------------------------------------
 ;; It all comes down to this, the entry point that returns a list of
 ;; ffi/unsafe declarations for use in Racket.
@@ -867,10 +886,16 @@
            ("union"        . ,generate-union-signature)
            ("command"      . ,generate-command-signature)))
 
-  (for/list ([type (in-list ordered)])
-    (define category (attr-ref type 'category ""))
-    (define alias (attr-ref type 'alias #f))
-    (if alias
-        (let ([namer (if (tag=? 'command type) string->symbol cname)])
-          `(define ,(namer (get-type-name type)) ,(namer alias)))
-        ((hash-ref category=>proc category) type registry lookup))))
+
+  (define generated-by-category
+    (for/list ([type (in-list ordered)])
+      (define category (attr-ref type 'category ""))
+      (define alias (attr-ref type 'alias #f))
+      (if alias
+          (let ([namer (if (tag=? 'command type) string->symbol cname)])
+            `(define ,(namer (get-type-name type)) ,(namer alias)))
+          ((hash-ref category=>proc category) type registry lookup))))
+
+  (append
+   (generate-define-constants registry)
+   generated-by-category))
