@@ -49,4 +49,4 @@ fi
 exec git diff-index --check --cached $against --
 
 # Run Racket tests
-raco test -x -p vulkan
+exec raco test -x -p vulkan
