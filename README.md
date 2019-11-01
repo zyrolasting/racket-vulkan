@@ -1,3 +1,5 @@
+![racket-vulkan logo](./private/assets/hero.png)
+
 Vulkan API integration and utilities for Racket.
 
 ## Supporting the project
