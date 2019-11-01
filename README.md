@@ -1,4 +1,6 @@
-![racket-vulkan logo](./private/assets/hero.png)
+<p align="center">
+  <img style="width: 100%" alt="Racket + Vulkan = awesome" src="./private/assets/hero.png">
+</p>
 
 Vulkan API integration and utilities for Racket.
 
