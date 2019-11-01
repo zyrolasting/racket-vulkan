@@ -30,6 +30,7 @@
          "../analyze/c.rkt"      ; For building predicates on C text.
          "../analyze/spec.rkt"   ; For making the registry easier to process.
          "../analyze/txexpr.rkt" ; For element analysis
+         "../analyze/memos.rkt"  ; For memoization
          "../../spec.rkt")       ; For sourcing VulkanAPI spec
 
 (module+ test
@@ -336,7 +337,7 @@
 ;; <enums> elements are a list of #defines. Others are actual C enums.
 ;; This is the case that generates actual C enums.
 (define collect-extensions-by-enum-name
-  (simple-memo (λ (registry)
+  (memoizer (λ (registry)
                  (foldl (λ (extension result)
                           (foldl (λ (enumerant collecting-enumerants)
                                    (hash-set collecting-enumerants
@@ -358,20 +359,20 @@
          (find-all-by-tag 'enum where)))
 
 (define collect-enumerants-by-name/all
-  (simple-memo collect-enumerants-by-name))
+  (memoizer collect-enumerants-by-name))
 (define collect-enumerants-by-name/core
-  (simple-memo (λ (registry)
+  (memoizer (λ (registry)
                  (collect-enumerants-by-name
                   (find-first-by-tag 'enums registry)))))
 (define collect-enumerants-by-name/features
-  (simple-memo (λ (registry)
+  (memoizer (λ (registry)
                  (define hashes (map collect-enumerants-by-name (find-all-by-tag 'feature registry)))
                  (if (empty? hashes)
                      #hash()
                      (apply hash-union hashes)))))
 
 (define collect-enumerant-name-counts
-  (simple-memo (λ (registry)
+  (memoizer (λ (registry)
                  (foldl (λ (enum result)
                           (if (attrs-have-key? enum 'name)
                               (hash-set result
@@ -382,7 +383,7 @@
                         (find-all-by-tag 'enum registry)))))
 
 (define collect-enumerant-relationships
-  (simple-memo
+  (memoizer
    (λ (registry)
      (foldl (λ (x res)
               (hash-set res
