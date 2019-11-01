@@ -1,8 +1,8 @@
 <p align="center">
-  <img style="width: 100%" alt="Racket + Vulkan = awesome" src="./private/assets/hero.png">
+  <img style="width: 100%" alt="Racket + Vulkan® = awesome" src="./private/assets/hero.png">
 </p>
 
-Vulkan API integration and utilities for Racket.
+Vulkan® API integration and utilities for Racket.
 
 ## Supporting the project
 
@@ -20,3 +20,5 @@ software and get guarenteed response times for support, consider
 - [x] Write example applications to aid education
 
 [glsd]: https://docs.racket-lang.org/raco/dirs.html#%28def._%28%28lib._setup%2Fdirs..rkt%29._get-lib-search-dirs%29%29
+
+Vulkan and the Vulkan logo are registered trademarks of the Khronos Group Inc.
