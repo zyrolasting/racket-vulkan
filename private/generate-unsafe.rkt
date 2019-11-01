@@ -19,7 +19,7 @@
 
 (module+ genmod
   (call-with-output-file #:exists 'replace
-    (build-path here "unsafe.rkt")
+    (build-path here "../unsafe.rkt")
     genmod/local))
 
 ;;-----------------------------------------------------------------------------------
@@ -41,7 +41,7 @@
 (define (write-module-out signatures [out (current-output-port)])
   (parameterize ([current-output-port out])
     (call-with-input-file
-      (build-path here "private/unsafe-preamble.rkt")
+      (build-path here "assets/unsafe-preamble.rkt")
       (λ (in) (copy-port in out)))
     (for ([sig signatures])
       (writeln sig))))
