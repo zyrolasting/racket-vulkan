@@ -1,3 +1,5 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 <p align="center">
   <img style="width: 100%" alt="Racket + Vulkan® = awesome" src="./private/assets/hero.png">
 </p>
