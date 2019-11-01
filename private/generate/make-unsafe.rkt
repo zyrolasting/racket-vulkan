@@ -5,7 +5,7 @@
 
 (require racket/contract
          racket/list
-         "./paths.rkt")
+         "../paths.rkt")
 
 (provide
   (contract-out
@@ -27,10 +27,10 @@
 (require racket/hash
          racket/port
          racket/string
-         "./analyze/c.rkt"      ; For building predicates on C text.
-         "./analyze/spec.rkt"   ; For making the registry easier to process.
-         "./analyze/txexpr.rkt" ; For element analysis
-         "../spec.rkt")         ; For sourcing VulkanAPI spec
+         "../analyze/c.rkt"      ; For building predicates on C text.
+         "../analyze/spec.rkt"   ; For making the registry easier to process.
+         "../analyze/txexpr.rkt" ; For element analysis
+         "../../spec.rkt")       ; For sourcing VulkanAPI spec
 
 (module+ test
   (require rackunit
