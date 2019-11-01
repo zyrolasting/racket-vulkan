@@ -6,7 +6,7 @@
 
 (require xml
          racket/contract
-         racket/runtime-path)
+         "./private/paths.rkt")
 
 (provide
  vulkan-spec-sources/c
@@ -18,8 +18,7 @@
 (define vulkan-spec-sources/c (symbols 'local 'remote))
 
 ; What 'local implies
-(define-runtime-path registry-dir ".")
-(define local-mirror-path (build-path registry-dir "private/assets/vk.xml"))
+(define local-mirror-path (build-path assets-path "vk.xml"))
 
 ; Run this script directly to see Vulkan spec xexpr on (current-output-port)
 (module+ main (writeln (get-vulkan-spec)))

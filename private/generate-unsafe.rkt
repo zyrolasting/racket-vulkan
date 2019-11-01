@@ -5,21 +5,19 @@
 
 (require racket/contract
          racket/list
-         racket/runtime-path)
+         "./paths.rkt")
 
 (provide
   (contract-out
     ; Return a list of datums that can be written as a Racket module.
     [generate-vulkan-bindings (-> vulkan-spec? list?)]))
 
-(define-runtime-path here ".")
-
 (module+ main
   (genmod/local))
 
 (module+ genmod
   (call-with-output-file #:exists 'replace
-    (build-path here "../unsafe.rkt")
+    (build-path package-path "unsafe.rkt")
     genmod/local))
 
 ;;-----------------------------------------------------------------------------------
@@ -41,7 +39,7 @@
 (define (write-module-out signatures [out (current-output-port)])
   (parameterize ([current-output-port out])
     (call-with-input-file
-      (build-path here "assets/unsafe-preamble.rkt")
+      (build-path assets-path "unsafe-preamble.rkt")
       (λ (in) (copy-port in out)))
     (for ([sig signatures])
       (writeln sig))))
