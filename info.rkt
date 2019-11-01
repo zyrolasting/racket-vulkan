@@ -6,3 +6,4 @@
 (define pkg-desc "Vulkan integration for Racket")
 (define version "0.0")
 (define pkg-authors '("Sage Gerard"))
+(define test-omit-paths '("unsafe.rkt"))
