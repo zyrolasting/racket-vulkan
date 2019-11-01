@@ -29,10 +29,10 @@
 (require racket/hash
          racket/port
          racket/string
-         "./private/c-analysis.rkt"  ; For building predicates on C text.
-         "./private/curation.rkt"    ; For making the registry easier to process.
-         "./private/txexpr.rkt"      ; For element analyis
-         "./spec.rkt")               ; For sourcing VulkanAPI spec
+         "./c-analysis.rkt"  ; For building predicates on C text.
+         "./curation.rkt"    ; For making the registry easier to process.
+         "./txexpr.rkt"      ; For element analyis
+         "../spec.rkt")      ; For sourcing VulkanAPI spec
 
 (module+ test
   (require rackunit
