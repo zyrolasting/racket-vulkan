@@ -7,8 +7,8 @@
 ;; another module.
 
 (require racket/set
-         "./private/txexpr.rkt"
-         "./spec.rkt")
+         "./txexpr.rkt"
+         "../../spec.rkt")
 
 ;; The interface is loosely inspired by a browser console API, in
 ;; which '$$' is like 'querySelectorAll' and '$' is like
