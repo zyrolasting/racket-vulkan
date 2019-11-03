@@ -10,10 +10,6 @@
 (define-ffi-definer define-vulkan (ffi-lib libname)
   #:default-make-fail make-not-available)
 
-(define (check-vkResult v who)
-  (unless (equal? v 'VK_SUCCESS)
-    (error who "failed: ~a" v)))
-
 (define _VisualID _ulong)
 (define _Window _ulong)
 (define _RROutput _ulong)
