@@ -26,6 +26,7 @@
 
 (require racket/hash
          racket/port
+         racket/set
          racket/string
          "../analyze/c.rkt"      ; For building predicates on C text.
          "../analyze/spec.rkt"   ; For making the registry easier to process.
@@ -859,6 +860,26 @@
   (list (generate-define-constant-signature registry "VK_HEADER_VERSION")
         (generate-define-constant-signature registry "VK_NULL_HANDLE")))
 
+(define (generate-check-vkResult-signature registry)
+  (define with-success-codes
+    (findf*-txexpr registry
+                   (λ (x) (attrs-have-key? x 'successcodes))))
+
+  (define possible-codes
+    (for/fold ([working (set)])
+              ([has-codes with-success-codes])
+      (define comma-separated (attr-ref has-codes 'successcodes))
+      (define success-code-strings (regexp-split #px"\\s*,\\s*"
+                                                 (string-trim comma-separated)))
+      (set-union working (apply set (map string->symbol success-code-strings)))))
+
+  (list
+     `(define -success-codes ',(set->list possible-codes))
+     `(define (check-vkResult v who)
+        (unless (member v -success-codes)
+          (error who "failed: ~a" v)))))
+
+
 ;; ------------------------------------------------------------------
 ;; It all comes down to this, the entry point that returns a list of
 ;; ffi/unsafe declarations for use in Racket.
@@ -897,4 +918,5 @@
 
   (append
    (generate-define-constants registry)
+   (generate-check-vkResult-signature registry)
    generated-by-category))
