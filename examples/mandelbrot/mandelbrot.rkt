@@ -15,7 +15,8 @@
 (require racket/runtime-path
          vulkan/unsafe
          ffi/unsafe
-         ffi/cvector)
+         ffi/cvector
+         (only-in racket/draw make-bitmap))
 
 (define (enable-validation-layer?)
   (equal? #"true"
@@ -577,15 +578,20 @@
   (define (cvt v)
     (inexact->exact (truncate (* 255.0 v))))
 
-  (call-with-output-file
-    #:exists 'replace
-    (build-path here "mandelbrot.rgba")
-    (λ (port)
-      (for ([i (in-range (* width height))])
-        (define pixel (ptr-ref pixel/p _pixel i))
-        (write-byte (cvt (pixel-r pixel)) port)
-        (write-byte (cvt (pixel-g pixel)) port)
-        (write-byte (cvt (pixel-b pixel)) port)
-        (write-byte (cvt (pixel-a pixel)) port))))
+  (define argb-bytes
+    (call-with-output-bytes
+      (λ (port)
+        (for ([i (in-range (* width height))])
+          (define pixel (ptr-ref pixel/p _pixel i))
+          (write-byte (cvt (pixel-a pixel)) port)
+          (write-byte (cvt (pixel-r pixel)) port)
+          (write-byte (cvt (pixel-g pixel)) port)
+          (write-byte (cvt (pixel-b pixel)) port)))))
 
-  (vkUnmapMemory logical-device buffer-memory))
+  (vkUnmapMemory logical-device buffer-memory)
+
+  (define output-file (build-path here "mandelbrot.png"))
+  (define bitmap (make-bitmap width height))
+  (send bitmap set-argb-pixels 0 0 width height argb-bytes)
+  (unless (send bitmap save-file output-file 'png)
+    (error 'dump-bytes "Saving of file failed: ~a" output-file)))
