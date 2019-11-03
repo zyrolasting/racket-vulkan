@@ -10,10 +10,6 @@
 (define-ffi-definer define-vulkan (ffi-lib libname)
   #:default-make-fail make-not-available)
 
-(define (check-vkResult v who)
-  (unless (equal? v 'VK_SUCCESS)
-    (error who "failed: ~a" v)))
-
 (define _VisualID _ulong)
 (define _Window _ulong)
 (define _RROutput _ulong)
@@ -65,6 +61,8 @@
   (bitwise-and v #xfff))
 (define VK_HEADER_VERSION 126)
 (define VK_NULL_HANDLE 0)
+(define -success-codes (quote (VK_TIMEOUT VK_SUCCESS VK_EVENT_RESET VK_NOT_READY VK_SUBOPTIMAL_KHR VK_INCOMPLETE VK_EVENT_SET)))
+(define (check-vkResult v who) (unless (member v -success-codes) (error who "failed: ~a" v)))
 (define _uint16_t _uint16)
 (define _uint64_t _uint64)
 (define _char _sbyte)
