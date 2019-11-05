@@ -33,27 +33,14 @@
             (not is-macro))
           types))
 
+(define get-type-elements
+  (memoizer (λ (registry)
+              (get-tagged-children (find-first-by-tag 'types registry)))))
+
 (define (remove-category cat)
   (λ (types)
     (filter (λ (t) (not (equal? (attr-ref t 'category "") cat)))
             types)))
-
-
-;; Categorizes <type requires="vk_platform"> as "ctype".
-;; Interestingly, they are not already of category "basetype".
-(define (categorize-c-types types)
-  ; Don't include types that ffi/unsafe already provides.
-  (define (already-in-racket? x)
-    (member (cname (get-type-name x))
-            '(_void _float _double _int)))
-
-  (map (λ (x)
-         (define requires (attr-ref x 'requires ""))
-         (if (and (equal? requires "vk_platform")
-                  (not (already-in-racket? x)))
-             (attr-set x 'category "ctype")
-             x))
-       types))
 
 (define get-type-lookup
   (memoizer
@@ -235,8 +222,7 @@
   (define curate-types (compose sort-types
                                 remove-c-macros
                                 (remove-category "include")
-                                (remove-category "")
-                                categorize-c-types))
+                                (remove-category "")))
 
   (define curate-enums (compose categorize-enums-that-arent))
   (define curate-commands (compose categorize-commands))
@@ -248,14 +234,13 @@
             (curate-commands (get-tagged-children (find-first-by-tag 'commands registry)))))
 
   ;; We want the basic types to always come first.
-  (define forced-preamble-categories '("ctype" "basetype" "symdecl" "consts"))
+  (define forced-preamble-categories '("basetype" "symdecl" "consts"))
   (define-values (basetypes customtypes)
     (partition (λ (x) (member (attr-ref x 'category)
                               forced-preamble-categories))
                curated-declarations))
 
-  (append (filter (λ (x) (category=? "ctype" x)) basetypes)
-          (filter (λ (x) (category=? "basetype" x)) basetypes)
+  (append (filter (λ (x) (category=? "basetype" x)) basetypes)
           (filter (λ (x) (category=? "symdecl" x)) basetypes)
           (filter (λ (x) (category=? "consts" x)) basetypes)
           customtypes))

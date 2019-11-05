@@ -31,6 +31,7 @@
          "../analyze/txexpr.rkt" ; For element analysis
          "../analyze/memos.rkt"  ; For memoization
          "../writer.rkt"         ; For writing to the file system
+         "./basetypes.rkt"
          "../../spec.rkt")       ; For sourcing VulkanAPI spec
 
 
@@ -85,51 +86,6 @@
 (define generate-define-signature
   (procedure-rename generate-symdecl-signature
                     'generate-define-signature))
-
-
-;; ------------------------------------------------------------------
-;; "ctype" is also made up. It's for types that are actual C types
-;; that we can translate directly to identifiers provided by
-;; ffi/unsafe.
-
-(define (generate-ctype-signature type-xexpr [registry #f] [lookup #hash()])
-  (define registry-type-name (get-type-name type-xexpr))
-  (define racket-id (cname registry-type-name))
-
-  (define name=>existing
-    #hash(("char"      . "sbyte")
-          ("void"      . "void")
-          ("uint32_t"  . "uint32")
-          ("float"     . "float")
-          ("double"    . "double")
-          ("uint8_t"   . "uint8")
-          ("uint16_t"  . "uint16")
-          ("uint32_t"  . "uint32")
-          ("uint64_t"  . "uint64")
-          ("int32_t"   . "int32")
-          ("int64_t"   . "int64")
-          ("size_t"    . "size")))
-
-
-  (define type-id
-   (if (hash-has-key? name=>existing registry-type-name)
-       (hash-ref name=>existing registry-type-name)
-       ; The _t replacement occurs because Racket C numeric types exclude them,
-       ; and Racket already has bindings for _size, _uint8, etc.
-       (string-replace registry-type-name
-                       "_t"
-                       "")))
-
-  `(define ,racket-id ,(cname type-id)))
-
-(module+ test
-  (test-equal? "Generate ctype without _t"
-               (generate-ctype-signature '(type ((category "ctype") (name "void"))))
-               '(define _void _void))
-  (test-equal? "Generate ctype signature with _t"
-               (generate-ctype-signature '(type ((category "ctype") (name "uint32_t"))))
-               '(define _uint32_t _uint32)))
-
 
 ;; ------------------------------------------------
 ;; C unions correspond to <type category="union">
@@ -892,6 +848,7 @@
 
     (yield* (generate-define-constants registry))
     (yield* (generate-check-vkResult-signature registry))
+    (yield* (generate-ctype-declarations registry))
 
     (define ordered (curate-registry registry))
     (define lookup (get-type-lookup ordered))
@@ -901,8 +858,7 @@
     ; introduced a few of its own, and they are not restricted to
     ; <type> elements.
     (define category=>proc
-      `#hash(("ctype"        . ,generate-ctype-signature)
-             ("consts"       . ,generate-consts-signature)
+      `#hash(("consts"       . ,generate-consts-signature)
              ("basetype"     . ,generate-basetype-signature)
              ("symdecl"      . ,generate-symdecl-signature)
              ("define"       . ,generate-define-signature)
