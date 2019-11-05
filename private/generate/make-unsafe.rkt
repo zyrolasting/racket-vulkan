@@ -830,22 +830,25 @@
 (define (yield* sequence)
   (for ([datum sequence]) (yield datum)))
 
+; We embed unsafe-preamble.rkt directly so that clients
+; can generate low-level bindings that can operate
+; outside of the vulkan collection.
+(define (generate-preamble-bindings)
+  (in-generator
+   (call-with-input-file
+     (build-path private-path "unsafe-preamble.rkt")
+     (λ (in)
+       (read-line in) ; discard #lang line
+       (let loop ([datum (read in)])
+         (if (eof-object? datum)
+             (void)
+             (begin
+               (yield datum)
+               (loop (read in)))))))))
+
 (define (generate-vulkan-bindings registry)
   (in-generator
-    ; We embed unsafe-preamble.rkt directly so that clients
-    ; can generate low-level bindings that can operate
-    ; outside of the vulkan collection.
-    (call-with-input-file
-      (build-path private-path "unsafe-preamble.rkt")
-      (λ (in)
-        (read-line in) ; discard #lang line
-        (let loop ([datum (read in)])
-          (if (eof-object? datum)
-              (void)
-              (begin
-                (yield datum)
-                (loop (read in)))))))
-
+    (yield* (generate-preamble-bindings))
     (yield* (generate-define-constants registry))
     (yield* (generate-check-vkResult-signature registry))
     (yield* (generate-ctype-declarations registry))
