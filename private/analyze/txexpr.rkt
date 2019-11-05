@@ -65,37 +65,3 @@
 (define (get-elements-of-tag t tx)
   (filter (λ (x) (tag=? t x))
           (get-elements tx)))
-
-; Type names appear in attribute or in CDATA of <name> element.
-; https://www.khronos.org/registry/vulkan/specs/1.1/registry.html#_attributes_of_type_tags
-(define (get-type-name type-element)
-  (attr-ref type-element
-            'name
-            (λ _
-              (define name-element
-                (findf-txexpr type-element
-                              (λ (x) (and (list? x)
-                                          (equal? (get-tag x) 'name)))))
-              (and name-element
-                   (shrink-wrap-cdata name-element)))))
-
-(define (type-name=? type-element name)
-  (equal? (get-type-name type-element) name))
-
-(define collect-enums
-  (memoizer (λ (registry)
-              (find-all-by-tag 'enums registry))))
-
-(define collect-named-enums
-  (memoizer (λ (registry)
-              (foldl (λ (x h) (if (attrs-have-key? x 'name)
-                                  (hash-set h (attr-ref x 'name) x)
-                                  h))
-                     #hash()
-                     (collect-enums registry)))))
-
-(define (get-type-by-category cat registry)
-    (findf*-txexpr registry
-                   (λ (x) (and (txexpr? x)
-                               (equal? 'type (get-tag x))
-                               (equal? cat (attr-ref x 'category #f))))))
