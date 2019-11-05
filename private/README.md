@@ -1,8 +1,8 @@
 # Strangulation in progress
 Some code is undergoing [strangulation][sp] as follows:
 
-1. [x] `make-unsafe.rkt` uses `strangerfigs/writer.rkt` to write `unsafe.rkt` to the file system.
-1. [ ] `make-unsafe.rkt` organizes code fragments from sequences in `stranglerfigs`, but does not
+1. [x] `make-unsafe.rkt` uses `writer.rkt` to write `unsafe.rkt` to the file system.
+1. [ ] `make-unsafe.rkt` organizes code fragments from sequences, but does not
 produce Racket code in sequences on its own.
 
 Here's a breakdown of old and new for context.
@@ -15,8 +15,7 @@ assumptions set by `analyze/spec.rkt` at once. A new maintainer (or a forgetful 
 must re-check all assumptions.
 
 ## The new
-The new code sits isolated from end users in `stranglerfigs`. It may grow independently,
-but must follow these rules:
+The new code must follow these rules:
 
 1. Generate Racket code fragments as [sequences][seq], not lists.
 2. Each `X.rkt` module must place all tests in a `X.test.rkt` in the same directory.

@@ -30,7 +30,7 @@
          "../analyze/spec.rkt"   ; For making the registry easier to process.
          "../analyze/txexpr.rkt" ; For element analysis
          "../analyze/memos.rkt"  ; For memoization
-         "../stranglerfigs/writer.rkt"
+         "../writer.rkt"         ; For writing to the file system
          "../../spec.rkt")       ; For sourcing VulkanAPI spec
 
 
