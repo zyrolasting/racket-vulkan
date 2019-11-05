@@ -1,7 +1,8 @@
 #lang racket/base
 
 (module+ test
-  (require rackunit)
+  (require rackunit
+           "basetypes.rkt")
   (test-equal? "Generate ctype without _t"
                (generate-ctype-signature '(type ((category "ctype") (name "void"))))
                '(define _void _void))
