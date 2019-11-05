@@ -1,7 +1,7 @@
 # Strangulation in progress
 Some code is undergoing [strangulation][sp] as follows:
 
-1. [ ] `make-unsafe.rkt` uses `strangerfigs/writer.rkt` to write `unsafe.rkt` to the file system.
+1. [x] `make-unsafe.rkt` uses `strangerfigs/writer.rkt` to write `unsafe.rkt` to the file system.
 1. [ ] `make-unsafe.rkt` organizes code fragments from sequences in `stranglerfigs`, but does not
 produce Racket code in sequences on its own.
 
