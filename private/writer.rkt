@@ -1,7 +1,7 @@
 #lang racket/base
 
 (provide (all-defined-out))
-(require "../paths.rkt")
+(require "./paths.rkt")
 
 ; This is how we deliver Racket code generated using the Vulkan spec.
 ; This procedure is kept seperate for the sake of a unit test.
