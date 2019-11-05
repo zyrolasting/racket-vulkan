@@ -41,7 +41,7 @@
 (define (write-module-out signatures [out (current-output-port)])
   (parameterize ([current-output-port out])
     (call-with-input-file
-      (build-path assets-path "unsafe-preamble.rkt")
+      (build-path private-path "unsafe-preamble.rkt")
       (λ (in) (copy-port in out)))
     (for ([sig signatures])
       (writeln sig))))
