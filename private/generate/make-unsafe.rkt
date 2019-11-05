@@ -10,45 +10,33 @@
 (provide
   (contract-out
     ; Return a list of datums that can be written as a Racket module.
-    [generate-vulkan-bindings (-> vulkan-spec? list?)]))
+    [generate-vulkan-bindings (-> vulkan-spec? sequence?)]))
 
 (module+ main
-  (genmod/local))
-
-(module+ genmod
-  (call-with-output-file #:exists 'replace
-    (build-path package-path "unsafe.rkt")
-    genmod/local))
+  (write-package-module-file! (get-vulkan-spec 'local)
+                              generate-vulkan-bindings
+                              "unsafe.rkt"))
 
 ;;-----------------------------------------------------------------------------------
 ;; Implementation
 ;; Registry guide: https://www.khronos.org/registry/vulkan/specs/1.1/registry.html
 
-(require racket/hash
+(require racket/generator
+         racket/hash
          racket/port
          racket/set
          racket/string
          "../analyze/c.rkt"      ; For building predicates on C text.
          "../analyze/spec.rkt"   ; For making the registry easier to process.
          "../analyze/txexpr.rkt" ; For element analysis
+         "../analyze/memos.rkt"  ; For memoization
+         "../writer.rkt"         ; For writing to the file system
          "../../spec.rkt")       ; For sourcing VulkanAPI spec
+
 
 (module+ test
   (require rackunit
            racket/list))
-
-(define (write-module-out signatures [out (current-output-port)])
-  (parameterize ([current-output-port out])
-    (call-with-input-file
-      (build-path assets-path "unsafe-preamble.rkt")
-      (λ (in) (copy-port in out)))
-    (for ([sig signatures])
-      (writeln sig))))
-
-(define (genmod/local [out (current-output-port)])
-  (write-module-out (generate-vulkan-bindings (get-vulkan-spec 'local))
-                    out))
-
 
 ;; -------------------------------------------------------------
 ;; The "basetype" category seems to be more from the perspective
@@ -337,7 +325,7 @@
 ;; <enums> elements are a list of #defines. Others are actual C enums.
 ;; This is the case that generates actual C enums.
 (define collect-extensions-by-enum-name
-  (simple-memo (λ (registry)
+  (memoizer (λ (registry)
                  (foldl (λ (extension result)
                           (foldl (λ (enumerant collecting-enumerants)
                                    (hash-set collecting-enumerants
@@ -359,20 +347,20 @@
          (find-all-by-tag 'enum where)))
 
 (define collect-enumerants-by-name/all
-  (simple-memo collect-enumerants-by-name))
+  (memoizer collect-enumerants-by-name))
 (define collect-enumerants-by-name/core
-  (simple-memo (λ (registry)
+  (memoizer (λ (registry)
                  (collect-enumerants-by-name
                   (find-first-by-tag 'enums registry)))))
 (define collect-enumerants-by-name/features
-  (simple-memo (λ (registry)
+  (memoizer (λ (registry)
                  (define hashes (map collect-enumerants-by-name (find-all-by-tag 'feature registry)))
                  (if (empty? hashes)
                      #hash()
                      (apply hash-union hashes)))))
 
 (define collect-enumerant-name-counts
-  (simple-memo (λ (registry)
+  (memoizer (λ (registry)
                  (foldl (λ (enum result)
                           (if (attrs-have-key? enum 'name)
                               (hash-set result
@@ -383,7 +371,7 @@
                         (find-all-by-tag 'enum registry)))))
 
 (define collect-enumerant-relationships
-  (simple-memo
+  (memoizer
    (λ (registry)
      (foldl (λ (x res)
               (hash-set res
@@ -883,39 +871,53 @@
 ;; It all comes down to this, the entry point that returns a list of
 ;; ffi/unsafe declarations for use in Racket.
 
+(define (yield* sequence)
+  (for ([datum sequence]) (yield datum)))
+
 (define (generate-vulkan-bindings registry)
-  (define ordered (curate-registry registry))
-  (define lookup (get-type-lookup ordered))
+  (in-generator
+    ; We embed unsafe-preamble.rkt directly so that clients
+    ; can generate low-level bindings that can operate
+    ; outside of the vulkan collection.
+    (call-with-input-file
+      (build-path private-path "unsafe-preamble.rkt")
+      (λ (in)
+        (read-line in) ; discard #lang line
+        (let loop ([datum (read in)])
+          (if (eof-object? datum)
+              (void)
+              (begin
+                (yield datum)
+                (loop (read in)))))))
 
-  ; To be clear, this is a superset of the category attribute values
-  ; you'd expect to find in the Vulkan registry. (curate-registry)
-  ; introduced a few of its own, and they are not restricted to
-  ; <type> elements.
-  (define category=>proc
-    `#hash(("ctype"        . ,generate-ctype-signature)
-           ("consts"       . ,generate-consts-signature)
-           ("basetype"     . ,generate-basetype-signature)
-           ("symdecl"      . ,generate-symdecl-signature)
-           ("define"       . ,generate-define-signature)
-           ("handle"       . ,generate-handle-signature)
-           ("enum"         . ,generate-enum-signature)
-           ("bitmask"      . ,generate-bitmask-signature)
-           ("funcpointer"  . ,generate-funcpointer-signature)
-           ("struct"       . ,generate-struct-signature)
-           ("union"        . ,generate-union-signature)
-           ("command"      . ,generate-command-signature)))
+    (yield* (generate-define-constants registry))
+    (yield* (generate-check-vkResult-signature registry))
 
+    (define ordered (curate-registry registry))
+    (define lookup (get-type-lookup ordered))
 
-  (define generated-by-category
-    (for/list ([type (in-list ordered)])
+    ; To be clear, this is a superset of the category attribute values
+    ; you'd expect to find in the Vulkan registry. (curate-registry)
+    ; introduced a few of its own, and they are not restricted to
+    ; <type> elements.
+    (define category=>proc
+      `#hash(("ctype"        . ,generate-ctype-signature)
+             ("consts"       . ,generate-consts-signature)
+             ("basetype"     . ,generate-basetype-signature)
+             ("symdecl"      . ,generate-symdecl-signature)
+             ("define"       . ,generate-define-signature)
+             ("handle"       . ,generate-handle-signature)
+             ("enum"         . ,generate-enum-signature)
+             ("bitmask"      . ,generate-bitmask-signature)
+             ("funcpointer"  . ,generate-funcpointer-signature)
+             ("struct"       . ,generate-struct-signature)
+             ("union"        . ,generate-union-signature)
+             ("command"      . ,generate-command-signature)))
+
+    (for ([type (in-list ordered)])
       (define category (attr-ref type 'category ""))
       (define alias (attr-ref type 'alias #f))
-      (if alias
-          (let ([namer (if (tag=? 'command type) string->symbol cname)])
-            `(define ,(namer (get-type-name type)) ,(namer alias)))
-          ((hash-ref category=>proc category) type registry lookup))))
-
-  (append
-   (generate-define-constants registry)
-   (generate-check-vkResult-signature registry)
-   generated-by-category))
+      (yield (if alias
+                 (let ([namer (if (tag=? 'command type) string->symbol cname)])
+                   `(define ,(namer (get-type-name type)) ,(namer alias)))
+                 ((hash-ref category=>proc category) type registry lookup))))))

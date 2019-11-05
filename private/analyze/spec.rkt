@@ -11,7 +11,8 @@
          racket/string
          graph
          "./txexpr.rkt"
-         "./c.rkt")
+         "./c.rkt"
+         "./memos.rkt")
 
 (module+ test
   (require rackunit))
@@ -55,7 +56,7 @@
        types))
 
 (define get-type-lookup
-  (simple-memo
+  (memoizer
    (λ (types)
      (make-immutable-hash (map (λ (x) (cons (get-type-name x) x))
                                types)))))

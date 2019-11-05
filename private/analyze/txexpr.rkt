@@ -14,14 +14,8 @@
 
 (require racket/string
          racket/list
-         txexpr)
-
-(define (simple-memo proc)
-  (define memo (void))
-  (λ A
-    (when (void? memo)
-      (set! memo (apply proc A)))
-    memo))
+         txexpr
+         "./memos.rkt")
 
 
 (define (with-attr name L)
@@ -89,16 +83,16 @@
   (equal? (get-type-name type-element) name))
 
 (define collect-enums
-  (simple-memo (λ (registry)
-                 (find-all-by-tag 'enums registry))))
+  (memoizer (λ (registry)
+              (find-all-by-tag 'enums registry))))
 
 (define collect-named-enums
-  (simple-memo (λ (registry)
-                  (foldl (λ (x h) (if (attrs-have-key? x 'name)
-                                      (hash-set h (attr-ref x 'name) x)
-                                      h))
-                         #hash()
-                         (collect-enums registry)))))
+  (memoizer (λ (registry)
+              (foldl (λ (x h) (if (attrs-have-key? x 'name)
+                                  (hash-set h (attr-ref x 'name) x)
+                                  h))
+                     #hash()
+                     (collect-enums registry)))))
 
 (define (get-type-by-category cat registry)
     (findf*-txexpr registry
