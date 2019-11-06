@@ -47,7 +47,7 @@
   (in-generator
    (for ([enums-element (get-all-enums-elements registry)])
      (unless (attrs-have-key? enums-element 'type)
-       (yield (generate-consts-signature enums-element))))))
+       (yield* (generate-consts-signature enums-element))))))
 
 (define (get-all-enums-elements registry)
   (append (find-all-by-tag 'enums registry)
@@ -84,14 +84,14 @@
 
 ;; Convert an <enums> element representing API constants into Racket code.
 (define (generate-consts-signature enums-xexpr)
-  `(begin
-     . ,(map (λ (enumerant)
-               `(define ,(string->symbol (attr-ref enumerant 'name))
-                  ,(if (attrs-have-key? enumerant 'alias)
-                       (string->symbol (attr-ref enumerant 'alias))
-                       (extract-value enumerant))))
-             (filter (λ (x) (tag=? 'enum x))
-                     (get-elements enums-xexpr)))))
+  (in-generator
+   (define enumerant-list (filter (λ (x) (tag=? 'enum x))
+                                  (get-elements enums-xexpr)))
+   (for ([enumerant enumerant-list])
+     (yield `(define ,(string->symbol (attr-ref enumerant 'name))
+               ,(if (attrs-have-key? enumerant 'alias)
+                    (string->symbol (attr-ref enumerant 'alias))
+                    (extract-value enumerant)))))))
 
 ;; Creates a Racket value from a Vulkan <enum> element representing
 ;; an API constant.
