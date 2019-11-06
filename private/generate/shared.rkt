@@ -3,15 +3,15 @@
 (provide (all-defined-out)
          (all-from-out racket/generator
                        racket/string
-                       "../analyze/memos.rkt"
-                       "../analyze/c.rkt"
-                       "../analyze/txexpr.rkt"))
+                       "../memos.rkt"
+                       "../c.rkt"
+                       "../txexpr.rkt"))
 
 (require racket/generator
          racket/string
-         "../analyze/memos.rkt"
-         "../analyze/c.rkt"
-         "../analyze/txexpr.rkt")
+         "../memos.rkt"
+         "../c.rkt"
+         "../txexpr.rkt")
 
 (define (yield* sequence)
   (for ([datum sequence])
