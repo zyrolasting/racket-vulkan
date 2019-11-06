@@ -12,7 +12,8 @@ download the latest copy from the Khronos Group, and convert the
 contents of any @litchar{vk.xml} to an X-expression.
 
 @defproc[(vulkan-spec? [v any/c]) boolean?]{
-Returns if argument is a Vulkan specification according to this collection.
+Returns @racket[#t] if argument is a Vulkan specification according to
+this collection, @racket[#f] otherwise.
 
 Currently the validation is not always correct because it does not yet support
 RelaxNG. This will come in a future version.
