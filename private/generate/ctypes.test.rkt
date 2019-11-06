@@ -2,7 +2,7 @@
 
 (module+ test
   (require rackunit
-           "basetypes.rkt")
+           "ctypes.rkt")
   (test-equal? "Generate ctype without _t"
                (generate-ctype-signature '(type ((category "ctype") (name "void"))))
                '(define _void _void))

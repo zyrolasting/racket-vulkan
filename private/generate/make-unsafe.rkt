@@ -13,7 +13,7 @@
   (require (rename-in path [in-fragment id])))
 
 (require-fg "./vkresult-checker.rkt" in-check-vkResult-signature)
-(require-fg "./basetypes.rkt" in-ctype-declarations)
+(require-fg "./ctypes.rkt" in-ctype-declarations)
 (require-fg "./preamble.rkt" in-preamble)
 (require-fg "./api-constants.rkt" in-api-constant-declarations)
 (require-fg "./typedefs.rkt" in-typedef-declarations)
