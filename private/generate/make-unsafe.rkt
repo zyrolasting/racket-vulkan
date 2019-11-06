@@ -5,20 +5,12 @@
 ;; version across all extensions and all platforms.
 
 (provide (all-defined-out))
-
-(require (for-syntax racket/base))
-(define-syntax-rule (require-fg path id)
-  (require (rename-in path [in-fragment id])))
-
-(require racket/generator
+(require (for-syntax racket/base)
+         racket/generator
          "./shared.rkt")
 
-(module+ main
-  (require "../../spec.rkt"
-           "../writer.rkt")
-  (write-package-module-file! (get-vulkan-spec 'local)
-                              in-fragment
-                              "unsafe.rkt"))
+(define-syntax-rule (require-fg path id)
+  (require (rename-in path [in-fragment id])))
 
 (require-fg "./vkresult-checker.rkt" in-check-vkResult-signature)
 (require-fg "./basetypes.rkt" in-ctype-declarations)

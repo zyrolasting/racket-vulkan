@@ -12,7 +12,7 @@
    (call-with-input-file
      (build-path private-path "unsafe-preamble.rkt")
      (λ (in)
-       (read-line in) ; discard #lang line
+       (yield (read-line in)) ; Forward #lang line
        (let loop ([datum (read in)])
          (if (eof-object? datum)
              (void)

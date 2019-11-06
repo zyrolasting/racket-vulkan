@@ -1,73 +1,61 @@
 #lang racket/base
 
 (provide (all-defined-out))
-(require "./paths.rkt")
+(require racket/stream
+         racket/string
+         "./paths.rkt")
 
-; This is how we deliver Racket code generated using the Vulkan spec.
-; This procedure is kept seperate for the sake of a unit test.
+;; This is how we deliver Racket code generated using the Vulkan spec.
 (define (write-sequence registry make-sequence [out (current-output-port)])
-  (for ([declaration (make-sequence registry)])
+  (define seq (sequence->stream (make-sequence registry)))
+  (define first-element (stream-first seq))
+
+  (if (and (string? first-element) (string-prefix? first-element "#lang"))
+      (displayln first-element out)
+      (writeln first-element out))
+
+  (for ([declaration (stream-rest seq)])
     (writeln declaration out)))
 
-(define (write-racket-module-file! path registry make-sequence)
-  (call-with-output-file #:exists 'replace
-    path
-    (λ (port)
-      (displayln "#lang racket/base" port) ; Limits load time
-      (write-sequence registry make-sequence port))))
-
-;; For maintainer use only.
-(define (write-package-module-file! registry make-sequence . path-elements)
-  (write-racket-module-file! (apply build-path package-path path-elements)
-                             registry
-                             make-sequence))
-
-;; Run this module as a script to run a built-in generator for Racket
-;; code. You can use this to piece together your own Racket module or
-;; to verify if a section of code reflects Vulkan's specification.
+;; Generate unsafe.rkt as follows:
+;;
+;;   $ raco rvk-gen ./private/generate/make-unsake.rkt > unsafe.rkt
+;;
+;; Use other modules to verify output of different sections of code.
 (module+ main
   (require racket/cmdline
-           racket/list
-           racket/path
-           racket/string
            "../spec.rkt")
-
-  (define (get-generate-path path-el)
-    (build-path private-path "generate" path-el))
-
-  ; Compute valid arguments for usage help
-  (define valid-names
-    (filter-map
-     (λ (f)
-       (with-handlers ([exn? (λ _ #f)])
-         (and (procedure? (dynamic-require (get-generate-path f)
-                                           'in-fragment))
-              (string-replace (path->string f)
-                              ".rkt"
-                              ""))))
-     (filter (λ (f) (equal? (path-get-extension f)
-                            #".rkt"))
-             (directory-list (build-path private-path
-                                         "generate")))))
-
-  (define (show-help)
-    (displayln "Expected one argument naming the code you wish to generate.")
-    (displayln (string-join (cons "The following values are accepted:"
-                                  valid-names)
-                            "\n")))
-
-  (when (= (vector-length (current-command-line-arguments)) 0)
-    (show-help)
-    (exit 1))
-
-  (define modname (command-line #:args (modname) modname))
-  (unless (member modname valid-names)
-    (show-help)
-    (exit 1))
-
-  (define modpath (path-replace-extension
-                   (get-generate-path modname)
-                   #".rkt"))
-
   (write-sequence (get-vulkan-spec 'local)
-                  (dynamic-require modpath 'in-fragment)))
+                  (dynamic-require (command-line #:args (p) p)
+                                   'in-fragment)))
+
+(module+ test
+  (require racket/generator
+           racket/port
+           rackunit)
+
+  (test-case "Write code fragment"
+    (define-values (i o) (make-pipe))
+    (define registry '(dummy))
+    (write-sequence registry
+                    (λ (x)
+                      (test-eq? "Registry referenced passed" registry x)
+                      (in-generator (yield '(a)) (yield '(b)) (yield '(c))))
+                    o)
+    (close-output-port o)
+    (test-equal? "Read values match order from generator"
+                 (port->list read i)
+                 '((a) (b) (c))))
+
+  (test-case "Write code module"
+    (define-values (i o) (make-pipe))
+    (write-sequence '(dummy)
+                    (λ (x)
+                      (in-generator (yield "#lang something") (yield '(b))))
+                    o)
+    (close-output-port o)
+    (test-equal? "#lang line preserved"
+                 (read-line i)
+                 "#lang something")
+    (test-equal? "Datum follows string"
+                 (read i) '(b))))
