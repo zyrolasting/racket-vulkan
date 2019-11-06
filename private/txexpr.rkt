@@ -1,22 +1,12 @@
 #lang racket/base
 
-;-----------------------------------------------------------------
-; This module is for Tagged X-expression search patterns as they
-; apply to vk.xml. This code just added noise when included in a
-; module for assembling FFI signatures.
+;; Tagged X-expression procedures adapted to this project.
 
 (provide (all-defined-out)
          (all-from-out txexpr))
 
-
-;-----------------------------------------------------------------
-; Implementation
-
-(require racket/string
-         racket/list
-         txexpr
-         "./memos.rkt")
-
+(require (only-in racket/string string-trim string-join)
+         txexpr)
 
 (define (with-attr name L)
   (filter (λ (x) (attrs-have-key? x name)) L))
@@ -59,7 +49,7 @@
          (get-elements x)))
 
 (define (snatch-cdata t tx #:children-only? [kidsonly #f])
-  (shrink-wrap-cdata (find-first-by-tag t (if kidsonly (list-set tx 0 (gensym))
+  (shrink-wrap-cdata (find-first-by-tag t (if kidsonly (cons (gensym) (cdr tx))
                                               tx))))
 
 (define (get-elements-of-tag t tx)
