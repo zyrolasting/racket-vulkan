@@ -22,7 +22,7 @@
 
 (define (in-fragment registry)
   (in-generator
-    (yield* (in-preamble))
+    (yield* (in-preamble registry))
     (yield* (in-check-vkResult-signature registry))
     (yield* (in-ctype-declarations registry))
     (yield* (in-api-constant-declarations registry))
