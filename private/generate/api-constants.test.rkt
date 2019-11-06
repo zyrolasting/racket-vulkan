@@ -2,7 +2,8 @@
 
 
 (module+ test
-  (require rackunit)
+  (require rackunit
+           "./api-constants.rkt")
 
   (test-equal? "(find-extension-constants)"
                (find-extension-constants
