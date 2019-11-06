@@ -11,7 +11,7 @@
                 '(root (extension "\n    "
                                   (require (enum ((extends "A") (name "B")))
                                            (enum ((name "X") (value "1")))))))
-               '(enums ((category "consts")) (enum ((name "X") (value "1")))))
+               '(enums (enum ((name "X") (value "1")))))
 
   (test-equal? "(generate-consts-signature)"
                (sequence->list
