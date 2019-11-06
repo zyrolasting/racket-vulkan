@@ -33,36 +33,14 @@
          "../analyze/memos.rkt"  ; For memoization
          "../writer.rkt"         ; For writing to the file system
          "./basetypes.rkt"
-         "./api-constants.rkt"
+         (only-in "./api-constants.rkt" generate-api-constant-declarations)
+         (only-in "./typedefs.rkt" generate-typedef-declarations)
          "./shared.rkt")
 
 
 (module+ test
   (require rackunit
            racket/list))
-
-;; -------------------------------------------------------------
-;; The "basetype" category seems to be more from the perspective
-;; of Vulkan than C, since they appear as typedefs of C types.
-
-(define (generate-basetype-signature type-xexpr [registry #f] [lookup #hash()])
-  (define name (get-type-name type-xexpr))
-  (define original-type (shrink-wrap-cdata
-                         (findf (λ (x) (tag=? 'type x))
-                                (get-elements type-xexpr))))
-
-  `(define ,(cname name) ,(cname original-type)))
-
-(module+ test
-  (test-equal? "(generate-basetype-signature)"
-               (generate-basetype-signature '(type ((category "basetype"))
-                                                   "typedef "
-                                                   (type "uint64_t")
-                                                   " "
-                                                   (name "VkDeviceAddress")
-                                                   ";"))
-               '(define _VkDeviceAddress _uint64_t)))
-
 
 ;; -------------------------------------------------------------------
 ;; The "define" category may contain C code of several meanings for
@@ -737,6 +715,7 @@
     (yield* (generate-check-vkResult-signature registry))
     (yield* (generate-ctype-declarations registry))
     (yield* (generate-api-constant-declarations registry))
+    (yield* (generate-typedef-declarations registry))
 
     (define ordered (curate-registry registry))
     (define lookup (get-type-lookup ordered))
@@ -746,8 +725,7 @@
     ; introduced a few of its own, and they are not restricted to
     ; <type> elements.
     (define category=>proc
-      `#hash(("basetype"     . ,generate-basetype-signature)
-             ("define"       . ,generate-define-signature)
+      `#hash(("define"       . ,generate-define-signature)
              ("handle"       . ,generate-handle-signature)
              ("enum"         . ,generate-enum-signature)
              ("bitmask"      . ,generate-bitmask-signature)

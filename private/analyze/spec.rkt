@@ -177,5 +177,4 @@
                               forced-preamble-categories))
                curated-declarations))
 
-  (append (filter (λ (x) (category=? "basetype" x)) basetypes)
-          customtypes))
+  customtypes)
