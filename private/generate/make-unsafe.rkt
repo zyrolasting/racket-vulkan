@@ -679,16 +679,8 @@
         (unless (member v -success-codes)
           (error who "failed: ~a" v)))))
 
-
-(define (generate-vulkan-bindings registry)
+(define (generate-interdependent-declarations registry)
   (in-generator
-    (yield* (generate-preamble))
-    (yield* (generate-check-vkResult-signature registry))
-    (yield* (generate-ctype-declarations registry))
-    (yield* (generate-api-constant-declarations registry))
-    (yield* (generate-typedef-declarations registry))
-    (yield* (generate-handle-declarations registry))
-
     (define ordered (curate-registry registry))
     (define lookup (get-type-lookup ordered))
 
@@ -714,3 +706,13 @@
                    (let ([namer (if (tag=? 'command type) string->symbol cname)])
                      `(define ,(namer (get-type-name type)) ,(namer alias)))
                    (make-datum type registry lookup)))))))
+
+(define (generate-vulkan-bindings registry)
+  (in-generator
+    (yield* (generate-preamble))
+    (yield* (generate-check-vkResult-signature registry))
+    (yield* (generate-ctype-declarations registry))
+    (yield* (generate-api-constant-declarations registry))
+    (yield* (generate-typedef-declarations registry))
+    (yield* (generate-handle-declarations registry))
+    (yield* (generate-interdependent-declarations registry))))
