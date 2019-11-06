@@ -8,11 +8,7 @@
 (provide (all-defined-out)
          (rename-out [generate-typedef-declarations generate-fragment]))
 
-(require racket/generator
-         racket/string
-         "../analyze/spec.rkt"
-         "../analyze/c.rkt"
-         "../analyze/txexpr.rkt")
+(require "./shared.rkt")
 
 (define (generate-basetype-signature type-xexpr)
   (define name (get-type-name type-xexpr))

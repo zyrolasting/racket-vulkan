@@ -5,11 +5,7 @@
 ; declarations that appear in vk.xml.
 
 (provide (all-defined-out))
-(require racket/generator
-         racket/string
-         "../analyze/spec.rkt"
-         "../analyze/c.rkt"
-         "../analyze/txexpr.rkt")
+(require "./shared.rkt")
 
 ; The keys are C type names as they appear in vk.xml.  The values are
 ; what the identifiers should be in Racket, without the leading

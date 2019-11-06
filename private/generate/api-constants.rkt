@@ -2,14 +2,8 @@
 
 (provide (all-defined-out)
          (rename-out [generate-api-constant-declarations generate-fragment]))
-(require racket/generator
-         racket/list
-         racket/string
-         "./shared.rkt"
-         "../analyze/spec.rkt"
-         "../analyze/c.rkt"
-         "../analyze/txexpr.rkt")
-
+(require racket/list
+         "./shared.rkt")
 
 ;; Declare all Vulkan API constants as Racket code.
 (define (generate-api-constant-declarations registry)

@@ -6,11 +6,7 @@
 ;; use symbols to represent them on the Racket side.
 
 (provide (all-defined-out))
-(require racket/generator
-         racket/string
-         "../analyze/spec.rkt"
-         "../analyze/c.rkt"
-         "../analyze/txexpr.rkt")
+(require "./shared.rkt")
 
 (define (generate-handle-signature handle-xexpr [registry #f] [lookup #hash()])
   (define name (get-type-name handle-xexpr))
