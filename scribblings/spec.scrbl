@@ -1,6 +1,7 @@
 #lang scribble/manual
 @require[@for-label[vulkan/spec
-                    racket/base]]
+                    racket/base
+                    racket/contract]]
 
 @title{Controlling the Vulkan Specification}
 
