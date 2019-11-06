@@ -26,13 +26,15 @@
          racket/port
          racket/set
          racket/string
+         "../../spec.rkt"        ; For sourcing VulkanAPI spec
          "../analyze/c.rkt"      ; For building predicates on C text.
          "../analyze/spec.rkt"   ; For making the registry easier to process.
          "../analyze/txexpr.rkt" ; For element analysis
          "../analyze/memos.rkt"  ; For memoization
          "../writer.rkt"         ; For writing to the file system
          "./basetypes.rkt"
-         "../../spec.rkt")       ; For sourcing VulkanAPI spec
+         "./api-constants.rkt"
+         "./shared.rkt")
 
 
 (module+ test
@@ -62,30 +64,21 @@
                '(define _VkDeviceAddress _uint64_t)))
 
 
-;; -------------------------------------------------------------
-;; The "symdecl" category is entirely made up by curated.rkt
-;; to shove dangling type names to the top of the list.
+;; -------------------------------------------------------------------
+;; The "define" category may contain C code of several meanings for
+;; our purposes. The curation step removes C macros, and the remaining
+;; types have a relevant name.  For those reasons we can make a simple
+;; binding.
 
-(define (generate-symdecl-signature type-xexpr [registry #f] [lookup #hash()])
+(define (generate-define-signature type-xexpr [registry #f] [lookup #hash()])
   (define name (get-type-name type-xexpr))
   `(define ,(cname name) ',(string->symbol name)))
 
 (module+ test
-  (test-equal? "(generate-symdecl-signature)"
-               (generate-symdecl-signature '(type ((category "symdecl")
-                                                   (name "VkDeviceAddress"))))
+  (test-equal? "(generate-define-signature)"
+               (generate-define-signature '(type ((category "symdecl")
+                                                  (name "VkDeviceAddress"))))
                '(define _VkDeviceAddress 'VkDeviceAddress)))
-
-
-;; ------------------------------------------------------------------
-;; The "define" category is related, but may contain C code of several
-;; meanings for our purposes. The curation step removes C macros, and
-;; the remaining types have a relevant name.  For those reasons we can
-;; treat "define" like "symdecl".
-
-(define generate-define-signature
-  (procedure-rename generate-symdecl-signature
-                    'generate-define-signature))
 
 ;; ------------------------------------------------
 ;; C unions correspond to <type category="union">
@@ -524,87 +517,6 @@
         (define VK_SHADER_STAGE_ALL 2147483647)))))
 
 
-
-;; ------------------------------------------------------------------
-;; This handles those <enums> that are not actually C enum types.
-
-(define (generate-consts-signature enum-xexpr [registry #f] [lookup #hash()])
-  ; Read this carefully. Notice that we're in quasiquote mode, and
-  ; the expression expands such that (system-type 'word) expands
-  ; on the client's system, but the "LL" check expands during
-  ; the runtime, while control is in this procedure.
-  ;
-  ; The intent is to make sure the client's system uses its own
-  ; word size when Vulkan uses the value ~0UL.
-  (define (compute-~0-declaration literal)
-    ; Extract subtraction operand
-    (define sub-op/match (regexp-match* #px"-\\d" literal))
-    (define sub-op (if (empty? sub-op/match)
-                       0
-                       (abs (string->number (car sub-op/match)))))
-
-    `(- (integer-bytes->integer
-         (make-bytes
-          (ctype-sizeof ,(if (string-contains? literal "LL") '_llong '_long))
-          255)
-         ,(string-contains? literal "U"))
-        ,sub-op))
-
-  (define (c-numeric-lit->number c-num-lit-string)
-    (define basenum (string->number (car (regexp-match* #px"\\d+"
-                                                        c-num-lit-string))))
-
-    (if (string-contains? c-num-lit-string "~")
-        (compute-~0-declaration c-num-lit-string)
-        basenum))
-
-  (define (extract-value enumerant)
-    (define value (attr-ref enumerant 'value))
-
-    (if (string-contains? value "\"")
-        (string->bytes/utf-8 value)
-        (let ([num-expr (c-numeric-lit->number value)])
-          (if (equal? (attr-ref enumerant 'dir #f) "-1")
-              `(* -1 ,num-expr)
-              num-expr))))
-
-
-  `(begin
-     . ,(map (λ (enumerant)
-               `(define ,(string->symbol (attr-ref enumerant 'name))
-                  ,(if (attrs-have-key? enumerant 'alias)
-                       (string->symbol (attr-ref enumerant 'alias))
-                       (extract-value enumerant))))
-             (filter (λ (x) (tag=? 'enum x))
-                     (get-elements enum-xexpr)))))
-
-(module+ test
-  (test-equal? "(generate-consts-signature)"
-               (generate-consts-signature
-                '(enums (enum ((value "(~0U)") (name "A")))
-                        (enum ((value "(~0ULL-2)") (name "B")))
-                        (enum ((value "(~0L)") (name "C")))
-                        (enum ((value "256") (name "D")))
-                        (enum ((value "(~0UL)") (dir "-1") (name "N")))
-                        (enum ((name "E") (alias "C")))))
-               '(begin
-                  (define A
-                    (- (integer-bytes->integer (make-bytes (ctype-sizeof _long) 255) #t)
-                       0))
-                  (define B
-                    (- (integer-bytes->integer (make-bytes (ctype-sizeof _llong) 255) #t)
-                       2))
-                  (define C
-                    (- (integer-bytes->integer (make-bytes (ctype-sizeof _long) 255) #f)
-                       0))
-                  (define D 256)
-                  (define N
-                    (* -1
-                       (- (integer-bytes->integer (make-bytes (ctype-sizeof _long) 255) #t)
-                          0)))
-                  (define E C))))
-
-
 ;; ------------------------------------------------------------------
 ; <type category="bitmask"> is just a C type declaration that happens
 ; to contain a typedef. Declaring _bitmask in Racket actually happens
@@ -784,25 +696,6 @@
                         -> (check-vkResult r 'vkCreateInstance)))))
 
 
-(define (generate-define-constant-signature registry target-name)
-  (define element
-    (findf-txexpr registry
-                  (λ (x) (and (tag=? 'type x)
-                              (equal? (get-type-name x)
-                                      target-name)))))
-
-  (define constant
-    (string->number
-     (regexp-replace* #px"\\D+"
-                      (shrink-wrap-cdata element)
-                     "")))
-
-  `(define ,(string->symbol target-name) ,constant))
-
-(define (generate-define-constants registry)
-  (list (generate-define-constant-signature registry "VK_HEADER_VERSION")
-        (generate-define-constant-signature registry "VK_NULL_HANDLE")))
-
 (define (generate-check-vkResult-signature registry)
   (define with-success-codes
     (findf*-txexpr registry
@@ -821,14 +714,6 @@
      `(define (check-vkResult v who)
         (unless (member v -success-codes)
           (error who "failed: ~a" v)))))
-
-
-;; ------------------------------------------------------------------
-;; It all comes down to this, the entry point that returns a list of
-;; ffi/unsafe declarations for use in Racket.
-
-(define (yield* sequence)
-  (for ([datum sequence]) (yield datum)))
 
 ; We embed unsafe-preamble.rkt directly so that clients
 ; can generate low-level bindings that can operate
@@ -849,9 +734,9 @@
 (define (generate-vulkan-bindings registry)
   (in-generator
     (yield* (generate-preamble-bindings))
-    (yield* (generate-define-constants registry))
     (yield* (generate-check-vkResult-signature registry))
     (yield* (generate-ctype-declarations registry))
+    (yield* (generate-api-constant-declarations registry))
 
     (define ordered (curate-registry registry))
     (define lookup (get-type-lookup ordered))
@@ -861,9 +746,7 @@
     ; introduced a few of its own, and they are not restricted to
     ; <type> elements.
     (define category=>proc
-      `#hash(("consts"       . ,generate-consts-signature)
-             ("basetype"     . ,generate-basetype-signature)
-             ("symdecl"      . ,generate-symdecl-signature)
+      `#hash(("basetype"     . ,generate-basetype-signature)
              ("define"       . ,generate-define-signature)
              ("handle"       . ,generate-handle-signature)
              ("enum"         . ,generate-enum-signature)

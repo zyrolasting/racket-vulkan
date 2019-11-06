@@ -114,29 +114,6 @@
   ; the aliased elements back on.
   (map resolve most-to-least-responsible/names))
 
-
-;; Not all <enums> elements are actually C enumerations.
-;; Categorize them so we know to treat them differently.
-(define (categorize-enums-that-arent enums-list)
-  (filter-map
-   (λ (x)
-     (and (not (attrs-have-key? x 'type))
-          (attr-set x 'category "consts")))
-   enums-list))
-
-(module+ test
-  (test-equal? "(categorize-enums-that-arent)"
-               (categorize-enums-that-arent
-                '((enums ((name "n") (type "t"))
-                         (enum ((name "a") (value "1")))
-                         (enum ((name "b") (value "2"))))
-                  (enums ((name "p"))
-                         (enum ((name "x") (value "1")))
-                         (enum ((name "y") (value "2"))))))
-               '((enums ((category "consts") (name "p"))
-                        (enum ((name "x") (value "1")))
-                        (enum ((name "y") (value "2")))))))
-
 ;; Just toss a category on <command> elements for consistency.
 ;; Keeps the logic in generate-bindings.rkt easier to think about.
 (define (categorize-commands commands-list)
@@ -144,43 +121,6 @@
                 (and (tag=? 'command x)
                      (attr-set x 'category "command")))
               commands-list))
-
-(define (find-extension-constants registry)
-  (define (accum source fetch)
-    (foldl (λ (x res)
-             (define matches (fetch x))
-             (if matches
-                 (append res matches)
-                 res))
-           '()
-           source))
-
-  (define require-elements
-    (accum
-     (find-all-by-tag 'extension registry)
-     (λ (x) (find-all-by-tag 'require x))))
-
-  (define enum-elements
-    (accum
-     require-elements
-     (λ (x) (find-all-by-tag 'enum x))))
-
-  (define extension-constants
-    (filter (λ (x) (and (attrs-have-key? x 'value)
-                        (not (attrs-have-key? x 'extends))))
-            enum-elements))
-
-  `(enums ((category "consts"))
-      . ,extension-constants))
-
-(module+ test
-  (test-equal? "(find-extension-constants)"
-               (find-extension-constants
-                '(root (extension "\n    "
-                                  (require (enum ((extends "A") (name "B")))
-                                           (enum ((name "X") (value "1")))))))
-               '(enums ((category "consts")) (enum ((name "X") (value "1"))))))
-
 
 
 ; Type names appear in attribute or in CDATA of <name> element.
@@ -224,13 +164,10 @@
                                 (remove-category "include")
                                 (remove-category "")))
 
-  (define curate-enums (compose categorize-enums-that-arent))
   (define curate-commands (compose categorize-commands))
 
   (define curated-declarations
-    (append (list (find-extension-constants registry))
-            (curate-types (get-tagged-children (find-first-by-tag 'types registry)))
-            (curate-enums (find-all-by-tag 'enums registry))
+    (append (curate-types (get-tagged-children (find-first-by-tag 'types registry)))
             (curate-commands (get-tagged-children (find-first-by-tag 'commands registry)))))
 
   ;; We want the basic types to always come first.
@@ -241,6 +178,4 @@
                curated-declarations))
 
   (append (filter (λ (x) (category=? "basetype" x)) basetypes)
-          (filter (λ (x) (category=? "symdecl" x)) basetypes)
-          (filter (λ (x) (category=? "consts" x)) basetypes)
           customtypes))
