@@ -15,9 +15,6 @@
 (define (cname str)
   (string->symbol (string-append "_" str)))
 
-(define (cnamef fmt-string . args)
-  (cname (apply format fmt-string args)))
-
 (define (infer-pointer-depth characters)
   (count (λ (ch) (char=? #\* ch)) characters))
 
