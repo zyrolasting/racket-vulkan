@@ -24,7 +24,7 @@ RelaxNG. This will come in a future version.
 These symbols select which @litchar{vk.xml} to use where applicable.
 
 @itemlist[
-@item{@racket['local] references the mirror of @litchar{vk.xml} packaged in the @racketmodname[vulkan] collection. It may be out of date, but can be used offline.}
+@item{@racket['local] references the mirror of @litchar{vk.xml} packaged with this collection. It may be out of date, but can be used offline.}
 @item{@racket['remote] references the latest official copy of @litchar{vk.xml} published by the Khronos Group.}
 ]
 }
