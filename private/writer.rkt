@@ -9,7 +9,6 @@
   (for ([declaration (make-sequence registry)])
     (writeln declaration out)))
 
-
 (define (write-racket-module-file! path registry make-sequence)
   (call-with-output-file #:exists 'replace
     path
@@ -17,7 +16,7 @@
       (displayln "#lang racket/base" port) ; Limits load time
       (write-sequence registry make-sequence port))))
 
-; For maintainer use only.
+;; For maintainer use only.
 (define (write-package-module-file! registry make-sequence . path-elements)
   (write-racket-module-file! (apply build-path package-path path-elements)
                              registry
@@ -42,7 +41,7 @@
      (λ (f)
        (with-handlers ([exn? (λ _ #f)])
          (and (procedure? (dynamic-require (get-generate-path f)
-                                           'generate-fragment))
+                                           'in-fragment))
               (string-replace (path->string f)
                               ".rkt"
                               ""))))
@@ -71,4 +70,4 @@
                    #".rkt"))
 
   (write-sequence (get-vulkan-spec 'local)
-                  (dynamic-require modpath 'generate-fragment)))
+                  (dynamic-require modpath 'in-fragment)))

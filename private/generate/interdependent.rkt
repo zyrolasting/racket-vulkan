@@ -8,6 +8,33 @@
          graph
          "./shared.rkt")
 
+(define (in-fragment registry)
+  (in-generator
+    (define ordered (curate-registry registry))
+    (define lookup (get-type-lookup ordered))
+
+    ; To be clear, this is a superset of the category attribute values
+    ; you'd expect to find in the Vulkan registry. (curate-registry)
+    ; introduced a few of its own, and they are not restricted to
+    ; <type> elements.
+    (define category=>proc
+      `#hash(("enum"         . ,generate-enum-signature)
+             ("bitmask"      . ,generate-bitmask-signature)
+             ("funcpointer"  . ,generate-funcpointer-signature)
+             ("struct"       . ,generate-struct-signature)
+             ("union"        . ,generate-union-signature)
+             ("command"      . ,generate-command-signature)))
+
+    (for ([type (in-list ordered)])
+      (define category (attr-ref type 'category ""))
+      (define alias (attr-ref type 'alias #f))
+      (define make-datum (hash-ref category=>proc category #f))
+      (when make-datum
+        (yield (if alias
+                   (let ([namer (if (tag=? 'command type) string->symbol cname)])
+                     `(define ,(namer (get-type-name type)) ,(namer alias)))
+                   (make-datum type registry lookup)))))))
+
 (define collect-enums
   (memoizer (λ (registry)
               (find-all-by-tag 'enums registry))))
@@ -455,31 +482,3 @@
                 `(r : ,ret))
            . ,(generate-maybe-wrapper (equal? undecorated-return "VkResult")
                                       id))))
-
-
-(define (generate-interdependent-declarations registry)
-  (in-generator
-    (define ordered (curate-registry registry))
-    (define lookup (get-type-lookup ordered))
-
-    ; To be clear, this is a superset of the category attribute values
-    ; you'd expect to find in the Vulkan registry. (curate-registry)
-    ; introduced a few of its own, and they are not restricted to
-    ; <type> elements.
-    (define category=>proc
-      `#hash(("enum"         . ,generate-enum-signature)
-             ("bitmask"      . ,generate-bitmask-signature)
-             ("funcpointer"  . ,generate-funcpointer-signature)
-             ("struct"       . ,generate-struct-signature)
-             ("union"        . ,generate-union-signature)
-             ("command"      . ,generate-command-signature)))
-
-    (for ([type (in-list ordered)])
-      (define category (attr-ref type 'category ""))
-      (define alias (attr-ref type 'alias #f))
-      (define make-datum (hash-ref category=>proc category #f))
-      (when make-datum
-        (yield (if alias
-                   (let ([namer (if (tag=? 'command type) string->symbol cname)])
-                     `(define ,(namer (get-type-name type)) ,(namer alias)))
-                   (make-datum type registry lookup)))))))

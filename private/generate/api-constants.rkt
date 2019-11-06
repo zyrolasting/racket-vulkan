@@ -1,12 +1,11 @@
 #lang racket/base
 
-(provide (all-defined-out)
-         (rename-out [generate-api-constant-declarations generate-fragment]))
+(provide (all-defined-out))
 (require racket/list
          "./shared.rkt")
 
 ;; Declare all Vulkan API constants as Racket code.
-(define (generate-api-constant-declarations registry)
+(define (in-fragment registry)
   (in-generator
    (yield (generate-define-constant-signature registry "VK_HEADER_VERSION"))
    (yield (generate-define-constant-signature registry "VK_NULL_HANDLE"))

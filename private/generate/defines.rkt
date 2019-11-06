@@ -6,11 +6,15 @@
 ;; but we do want the ones that give us simple bindings. This module
 ;; generates those.
 
-(provide (all-defined-out)
-         (rename-out [generate-relevant-preprocessor-declarations generate-fragment]))
-
+(provide (all-defined-out))
 (require racket/string
          "./shared.rkt")
+
+(define (in-fragment registry)
+  (in-generator
+   (for ([element (get-type-by-category "define" registry)])
+     (unless (is-c-macro? element)
+       (yield (generate-define-signature element))))))
 
 (define (generate-define-signature type-xexpr)
   (define name (get-type-name type-xexpr))
@@ -25,9 +29,3 @@
   (and (string-prefix? name "VK_")
        (equal? (string-upcase name)
                name)))
-
-(define (generate-relevant-preprocessor-declarations registry)
-  (in-generator
-   (for ([element (get-type-by-category "define" registry)])
-     (unless (is-c-macro? element)
-       (yield (generate-define-signature element))))))

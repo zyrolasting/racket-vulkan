@@ -7,6 +7,13 @@
 (provide (all-defined-out))
 (require "./shared.rkt")
 
+
+(define (in-fragment registry)
+  (in-generator
+   (for ([declaration (find-ctype-declarations registry)])
+     (yield (generate-ctype-signature declaration)))))
+
+
 ; The keys are C type names as they appear in vk.xml.  The values are
 ; what the identifiers should be in Racket, without the leading
 ; underscore.
@@ -43,7 +50,6 @@
 (define (generate-ctype-signature type-xexpr)
   (define registry-type-name (get-type-name type-xexpr))
   (define racket-id (cname registry-type-name))
-
   (define type-id
    (if (hash-has-key? name=>existing registry-type-name)
        (hash-ref name=>existing registry-type-name)
@@ -54,9 +60,3 @@
                        "")))
 
   `(define ,racket-id ,(cname type-id)))
-
-
-(define (generate-ctype-declarations registry)
-  (in-generator
-   (for ([declaration (find-ctype-declarations registry)])
-     (yield (generate-ctype-signature declaration)))))

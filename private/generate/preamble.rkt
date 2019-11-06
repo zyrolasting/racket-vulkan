@@ -1,15 +1,13 @@
 #lang racket/base
 
-(provide generate-preamble
-         (rename-out [generate-preamble generate-fragment]))
-
+(provide (all-defined-out))
 (require racket/generator
          "../paths.rkt")
 
-; We embed unsafe-preamble.rkt directly so that clients
-; can generate low-level bindings that can operate
-; outside of the vulkan collection.
-(define (generate-preamble)
+;; We embed unsafe-preamble.rkt directly so that clients
+;; can generate low-level bindings that can operate
+;; outside of the vulkan collection.
+(define (in-fragment registry)
   (in-generator
    (call-with-input-file
      (build-path private-path "unsafe-preamble.rkt")

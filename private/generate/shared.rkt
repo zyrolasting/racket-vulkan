@@ -17,7 +17,6 @@
   (for ([datum sequence])
     (yield datum)))
 
-
 (define get-type-elements
   (memoizer (λ (registry)
               (get-tagged-children (find-first-by-tag 'types registry)))))
@@ -28,9 +27,8 @@
      (make-immutable-hash (map (λ (x) (cons (get-type-name x) x))
                                types)))))
 
-
-; Type names appear in attribute or in CDATA of <name> element.
-; https://www.khronos.org/registry/vulkan/specs/1.1/registry.html#_attributes_of_type_tags
+;; Type names appear in attribute or in CDATA of <name> element.
+;; https://www.khronos.org/registry/vulkan/specs/1.1/registry.html#_attributes_of_type_tags
 (define (get-type-name type-element)
   (attr-ref type-element
             'name

@@ -4,7 +4,7 @@
 (require racket/set
          "./shared.rkt")
 
-(define (generate-check-vkResult-signature registry)
+(define (in-fragment registry)
   (define with-success-codes
     (findf*-txexpr registry
                    (λ (x) (attrs-have-key? x 'successcodes))))

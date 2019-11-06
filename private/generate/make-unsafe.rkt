@@ -5,31 +5,37 @@
 ;; version across all extensions and all platforms.
 
 (provide (all-defined-out))
+
+(require (for-syntax racket/base))
+(define-syntax-rule (require-fg path id)
+  (require (rename-in path [in-fragment id])))
+
 (require racket/generator
-         "./shared.rkt"
-         (only-in "./vkresult-checker.rkt" generate-check-vkResult-signature)
-         (only-in "./basetypes.rkt" generate-ctype-declarations)
-         (only-in "./preamble.rkt" generate-preamble)
-         (only-in "./api-constants.rkt" generate-api-constant-declarations)
-         (only-in "./typedefs.rkt" generate-typedef-declarations)
-         (only-in "./handles.rkt" generate-handle-declarations)
-         (only-in "./defines.rkt" generate-relevant-preprocessor-declarations)
-         (only-in "./interdependent.rkt" generate-interdependent-declarations))
+         "./shared.rkt")
 
 (module+ main
   (require "../../spec.rkt"
            "../writer.rkt")
   (write-package-module-file! (get-vulkan-spec 'local)
-                              generate-vulkan-bindings
+                              in-fragment
                               "unsafe.rkt"))
 
-(define (generate-vulkan-bindings registry)
+(require-fg "./vkresult-checker.rkt" in-check-vkResult-signature)
+(require-fg "./basetypes.rkt" in-ctype-declarations)
+(require-fg "./preamble.rkt" in-preamble)
+(require-fg "./api-constants.rkt" in-api-constant-declarations)
+(require-fg "./typedefs.rkt" in-typedef-declarations)
+(require-fg "./handles.rkt" in-handle-declarations)
+(require-fg "./defines.rkt" in-relevant-preprocessor-declarations)
+(require-fg "./interdependent.rkt" in-interdependent-declarations)
+
+(define (in-fragment registry)
   (in-generator
-    (yield* (generate-preamble))
-    (yield* (generate-check-vkResult-signature registry))
-    (yield* (generate-ctype-declarations registry))
-    (yield* (generate-api-constant-declarations registry))
-    (yield* (generate-typedef-declarations registry))
-    (yield* (generate-relevant-preprocessor-declarations registry))
-    (yield* (generate-handle-declarations registry))
-    (yield* (generate-interdependent-declarations registry))))
+    (yield* (in-preamble))
+    (yield* (in-check-vkResult-signature registry))
+    (yield* (in-ctype-declarations registry))
+    (yield* (in-api-constant-declarations registry))
+    (yield* (in-typedef-declarations registry))
+    (yield* (in-relevant-preprocessor-declarations registry))
+    (yield* (in-handle-declarations registry))
+    (yield* (in-interdependent-declarations registry))))
