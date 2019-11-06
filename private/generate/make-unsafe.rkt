@@ -33,6 +33,7 @@
          "../analyze/memos.rkt"  ; For memoization
          "../writer.rkt"         ; For writing to the file system
          "./basetypes.rkt"
+         (only-in "./preamble.rkt" generate-preamble)
          (only-in "./api-constants.rkt" generate-api-constant-declarations)
          (only-in "./typedefs.rkt" generate-typedef-declarations)
          (only-in "./handles.rkt" generate-handle-declarations)
@@ -678,25 +679,10 @@
         (unless (member v -success-codes)
           (error who "failed: ~a" v)))))
 
-; We embed unsafe-preamble.rkt directly so that clients
-; can generate low-level bindings that can operate
-; outside of the vulkan collection.
-(define (generate-preamble-bindings)
-  (in-generator
-   (call-with-input-file
-     (build-path private-path "unsafe-preamble.rkt")
-     (λ (in)
-       (read-line in) ; discard #lang line
-       (let loop ([datum (read in)])
-         (if (eof-object? datum)
-             (void)
-             (begin
-               (yield datum)
-               (loop (read in)))))))))
 
 (define (generate-vulkan-bindings registry)
   (in-generator
-    (yield* (generate-preamble-bindings))
+    (yield* (generate-preamble))
     (yield* (generate-check-vkResult-signature registry))
     (yield* (generate-ctype-declarations registry))
     (yield* (generate-api-constant-declarations registry))
