@@ -20,10 +20,10 @@ software and get guarenteed response times for support, consider
 This section is for maintainers, for the curious, and for myself when
 I inevitably forget what I did.
 
-This project's chief job is primarily to generate Racket code that can
-use Vulkan. `spec.rkt` manages Vulkan's XML specification. The local
-mirror is stored in `private/assets/vk.xml`.  The X-expression form of
-that document acts as the input to all code generators.
+This project's chief job is to generate Racket code that uses Vulkan.
+`spec.rkt` manages Vulkan's XML specification. The local mirror is
+stored in `private/assets/vk.xml`.  The X-expression form of that
+document acts as the input to all code generators.
 
 `private/generate` contains the code generators. Each module therein
 provides an `in-fragment` procedure.  `in-fragment` lazily produces
