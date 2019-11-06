@@ -35,6 +35,7 @@
          "./basetypes.rkt"
          (only-in "./api-constants.rkt" generate-api-constant-declarations)
          (only-in "./typedefs.rkt" generate-typedef-declarations)
+         (only-in "./handles.rkt" generate-handle-declarations)
          "./shared.rkt")
 
 
@@ -229,21 +230,6 @@
                          (member (type "C") "* " (name "pNext"))))
                  `(define-cstruct _C
                     ((pNext _pointer)))))
-
-
-;; ------------------------------------------------------------------
-;; Handles are just pointers to forward-declared structs with private
-;; definitions. We use symbols to represent them on the Racket side.
-
-(define (generate-handle-signature handle-xexpr [registry #f] [lookup #hash()])
-  (define name (get-type-name handle-xexpr))
-  `(define ,(cname name) (_cpointer/null ',(string->symbol (string-append name "_T")))))
-
-(module+ test
-  (test-equal? "(generate-handle-signature)"
-               (generate-handle-signature '(type ((category "handle"))
-                                                 "MAKE_HANDLE(" (name "VkDevice") ")"))
-               '(define _VkDevice (_cpointer/null 'VkDevice_T))))
 
 
 ;; ------------------------------------------------------------------
@@ -715,6 +701,7 @@
     (yield* (generate-ctype-declarations registry))
     (yield* (generate-api-constant-declarations registry))
     (yield* (generate-typedef-declarations registry))
+    (yield* (generate-handle-declarations registry))
 
     (define ordered (curate-registry registry))
     (define lookup (get-type-lookup ordered))
@@ -725,7 +712,6 @@
     ; <type> elements.
     (define category=>proc
       `#hash(("define"       . ,generate-define-signature)
-             ("handle"       . ,generate-handle-signature)
              ("enum"         . ,generate-enum-signature)
              ("bitmask"      . ,generate-bitmask-signature)
              ("funcpointer"  . ,generate-funcpointer-signature)
@@ -736,7 +722,9 @@
     (for ([type (in-list ordered)])
       (define category (attr-ref type 'category ""))
       (define alias (attr-ref type 'alias #f))
-      (yield (if alias
-                 (let ([namer (if (tag=? 'command type) string->symbol cname)])
-                   `(define ,(namer (get-type-name type)) ,(namer alias)))
-                 ((hash-ref category=>proc category) type registry lookup))))))
+      (define make-datum (hash-ref category=>proc category #f))
+      (when make-datum
+        (yield (if alias
+                   (let ([namer (if (tag=? 'command type) string->symbol cname)])
+                     `(define ,(namer (get-type-name type)) ,(namer alias)))
+                   (make-datum type registry lookup)))))))
