@@ -7,3 +7,6 @@
 (define version "0.0")
 (define pkg-authors '("Sage Gerard"))
 (define test-omit-paths '("unsafe.rkt" "unsafe-preamble.rkt"))
+(define raco-commands
+  '(("rvk-gen" (submod vulkan/private/writer main)
+               "Generate Racket code that uses Vulkan" #f)))
