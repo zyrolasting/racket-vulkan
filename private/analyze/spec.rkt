@@ -17,30 +17,10 @@
 (module+ test
   (require rackunit))
 
-;; The "define" <type> category includes both C macros and C type
-;; declarations. Strip out the macros to disambiguate the data. Note
-;; that the filter predicate assumes all macros start with VK_ and are
-;; all caps. Just checking for '#define' in the text will remove
-;; legitimate declarations.
-(define (remove-c-macros types)
-  (filter (λ (t)
-            (define name (get-type-name t))
-            (define category (attr-ref t 'category ""))
-            (define is-macro (and (equal? category "define")
-                                  (string-prefix? name "VK_")
-                                  (equal? (string-upcase name)
-                                          name)))
-            (not is-macro))
-          types))
 
 (define get-type-elements
   (memoizer (λ (registry)
               (get-tagged-children (find-first-by-tag 'types registry)))))
-
-(define (remove-category cat)
-  (λ (types)
-    (filter (λ (t) (not (equal? (attr-ref t 'category "") cat)))
-            types)))
 
 (define get-type-lookup
   (memoizer
@@ -159,22 +139,11 @@
 
 ; Return declaration elements in sorted groups.
 (define (curate-registry registry)
-  (define curate-types (compose sort-types
-                                remove-c-macros
-                                (remove-category "include")
-                                (remove-category "")))
-
-  (define curate-commands (compose categorize-commands))
-
   (define curated-declarations
-    (append (curate-types (get-tagged-children (find-first-by-tag 'types registry)))
-            (curate-commands (get-tagged-children (find-first-by-tag 'commands registry)))))
+    (append (sort-types (get-tagged-children (find-first-by-tag 'types registry)))
+            (categorize-commands (get-tagged-children (find-first-by-tag 'commands registry)))))
 
-  ;; We want the basic types to always come first.
-  (define forced-preamble-categories '("basetype" "symdecl" "consts"))
-  (define-values (basetypes customtypes)
-    (partition (λ (x) (member (attr-ref x 'category)
-                              forced-preamble-categories))
-               curated-declarations))
-
-  customtypes)
+  (define interdependent-categories '("struct" "union" "funcpointer" "command" "bitmask" "enum"))
+  (filter (λ (x) (member (attr-ref x 'category "")
+                         interdependent-categories))
+          curated-declarations))

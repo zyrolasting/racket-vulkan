@@ -37,27 +37,13 @@
          (only-in "./api-constants.rkt" generate-api-constant-declarations)
          (only-in "./typedefs.rkt" generate-typedef-declarations)
          (only-in "./handles.rkt" generate-handle-declarations)
+         (only-in "./defines.rkt" generate-relevant-preprocessor-declarations)
          "./shared.rkt")
 
 
 (module+ test
   (require rackunit
            racket/list))
-
-;; -------------------------------------------------------------------
-;; The "define" category may contain C code of several meanings for
-;; our purposes. The curation step removes C macros, and the remaining
-;; types have a relevant name.  For those reasons we can make a simple
-;; binding.
-
-(define (generate-define-signature type-xexpr [registry #f] [lookup #hash()])
-  (define name (get-type-name type-xexpr))
-  `(define ,(cname name) ',(string->symbol name)))
-
-(module+ test
-  (test-equal? "(generate-define-signature)"
-               (generate-define-signature '(type ((name "VkDeviceAddress"))))
-               '(define _VkDeviceAddress 'VkDeviceAddress)))
 
 ;; ------------------------------------------------
 ;; C unions correspond to <type category="union">
@@ -689,8 +675,7 @@
     ; introduced a few of its own, and they are not restricted to
     ; <type> elements.
     (define category=>proc
-      `#hash(("define"       . ,generate-define-signature)
-             ("enum"         . ,generate-enum-signature)
+      `#hash(("enum"         . ,generate-enum-signature)
              ("bitmask"      . ,generate-bitmask-signature)
              ("funcpointer"  . ,generate-funcpointer-signature)
              ("struct"       . ,generate-struct-signature)
@@ -714,5 +699,6 @@
     (yield* (generate-ctype-declarations registry))
     (yield* (generate-api-constant-declarations registry))
     (yield* (generate-typedef-declarations registry))
+    (yield* (generate-relevant-preprocessor-declarations registry))
     (yield* (generate-handle-declarations registry))
     (yield* (generate-interdependent-declarations registry))))
