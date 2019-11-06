@@ -1,6 +1,5 @@
 #lang racket/base
 
-;; -------------------------------------------------------------------
 ;; The "define" category may contain C code of several meanings for
 ;; our purposes. We cannot easily deal with the function-style C macros,
 ;; but we do want the ones that give us simple bindings. This module

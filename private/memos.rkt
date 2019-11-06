@@ -1,6 +1,5 @@
 #lang racket/base
 
-;; -------------------------------------------------------------
 ;; Responsible for caching the many expensive operations used to
 ;; gather information from the Vulkan spec.
 

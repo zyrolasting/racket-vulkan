@@ -1,6 +1,5 @@
 #lang racket/base
 
-;; ----------------------------------------------------------------
 ;; Generates a Racket module exposing the raw C API for each Vulkan
 ;; version across all extensions and all platforms.
 

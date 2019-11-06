@@ -1,6 +1,5 @@
 #lang racket/base
 
-;; ------------------------------------------------------------------
 ;; Generates Racket code to declare handle types. Handles are just
 ;; pointers to forward-declared structs with private definitions. We
 ;; use symbols to represent them on the Racket side.
