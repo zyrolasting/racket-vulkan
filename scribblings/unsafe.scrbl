@@ -160,3 +160,14 @@ Equivalent to @racket[(error who "failed: ~a" v)] if @racket[v] is not
 a @tt{VkResult} success code. This procedure is implicitly applied
 after all calls to foreign functions returning a VkResult.
 }
+
+@defproc[(format-vulkan-spec-version [spec-version exact-positive-integer?]) string?]{
+Equivalent to:
+
+@racketblock[
+(format "~a.~a.~a"
+  (VK_VERSION_MAJOR spec-version)
+  (VK_VERSION_MINOR spec-version)
+  (VK_VERSION_PATCH spec-version))
+]
+}

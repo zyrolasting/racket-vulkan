@@ -59,3 +59,9 @@
   (bitwise-and (arithmetic-shift v -12) #x3ff))
 (define (VK_VERSION_PATCH v)
   (bitwise-and v #xfff))
+
+(define (format-vulkan-spec-version spec-v)
+  (format "~a.~a.~a"
+          (VK_VERSION_MAJOR spec-v)
+          (VK_VERSION_MINOR spec-v)
+          (VK_VERSION_PATCH spec-v)))
