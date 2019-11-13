@@ -1,6 +1,7 @@
 #lang scribble/manual
 @require[@for-label[racket/base
-                    ffi/unsafe
+                    racket/contract
+                    @except-in[ffi/unsafe ->]
                     ffi/unsafe/define
                     vulkan/unsafe]
                     ffi/unsafe]
