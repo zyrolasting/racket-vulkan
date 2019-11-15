@@ -54,8 +54,7 @@ to know what bindings are available:
 @margin-note{To repeat, the interface is unstable and these items are subject to change.}
 @itemlist[
 @item{All identifiers acting as C types are prefixed with an underscore. So, the C type @tt{VkInstance} is bound to the @tt{_VkInstance} identifier in Racket.}
-@item{All enumerants are available as interned symbols and identifiers. The Racket identifier @tt{VK_SUCCESS} binds to the Racket value equivalent of @tt{VK_SUCCESS} In Vulkan. However, symbols like @racket['VK_SUCCESS] are available for FFI wrapper procedures that translate @racket[_enum] or @racket[_bitmask] values.}
-@item{API constants that are NOT from enumerated types are identifiers bound to a Racket value. e.g. @tt{VK_API_VERSION_1_1}.}
+@item{API constants and enumerants have identifiers bound to a Racket value. e.g. @tt{VK_API_VERSION_1_1}.}
 @item{All Vulkan functions are provided as Racket procedures with an identifier matching the name. e.g. The @tt{vkCreateInstance} C function is a Racket procedure also named @tt{vkCreateInstance}.}
 @item{A Racket procedure's presence is not a guarentee that the associated C function is available as an object in the system library. If you call @tt{vkCreateAndroidSurfaceKHR} on a non-Android platform, the C function will not be found.}
 @item{Unions are generated with accessor procedures that wrap @racket[union-ref]. So if a union @tt{U} has a member named @tt{floats}, you can access all Racket values converted from that union using @tt{(U-floats union-val)}.}

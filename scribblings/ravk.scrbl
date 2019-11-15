@@ -183,7 +183,17 @@ The built-in code generators share a set of parameters
 that control their output. You can control them using
 command-line flags.
 
-@itemlist[@item{@litchar{--enable-auto-check-vkresult}: When set, all foreign function calls that return a @tt{VkResult} will be automatically checked in a wrapping Racket procedure. If the code is an error code, the wrapping procedure will raise @racket[exn:fail].}]
+@itemlist[
+@item{@litchar{--enable-auto-check-vkresult}: When set, all foreign
+function calls that return a @tt{VkResult} will be automatically
+checked in a wrapping Racket procedure. If the code is an error code,
+the wrapping procedure will raise @racket[exn:fail].}
+@item{@litchar{--enable-symbolic-enums}: When set, all C enum types
+are represented using either @racket[_enum] or @racket[_bitmask]
+depending on their intended use. You must then use symbols to represent
+enumerants according to the rules of @racket[_enum] or @racket[_bitmask]
+in your program.}
+]
 
 @section{@tt{ravk replicate}: Integrate Independently}
 
