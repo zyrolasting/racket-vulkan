@@ -6,6 +6,6 @@
 (define pkg-desc "Vulkan integration for Racket")
 (define version "0.0")
 (define pkg-authors '("Sage Gerard"))
-(define test-omit-paths '("unsafe.rkt" "unsafe-preamble.rkt" #rx"examples"))
+(define test-omit-paths '(#rx"unsafe" #rx"examples"))
 (define racket-launcher-libraries '("cli/ravk.rkt"))
 (define racket-launcher-names '("ravk"))
