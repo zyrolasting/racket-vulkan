@@ -127,7 +127,7 @@ racket/base
          racket/string
          txexpr)
 
-(define (in-fragment registry-xexpr)
+(define (in-fragment registry-xexpr [config #hash()])
   (in-generator
     (yield "#lang racket/base")
     (define platform-type-elements
