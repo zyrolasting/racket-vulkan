@@ -1,6 +1,6 @@
 #lang scribble/manual
 
-@require[@for-label[racket/base]]
+@require[@for-label[racket/base ffi/unsafe]]
 
 @title{@tt{ravk}: Vulkan Ecosystem Controls}
 
@@ -41,9 +41,6 @@ $ ravk show spec --version # (or -v) Show specification version.
 $ ravk -l show spec -x     # X-expression of latest vk.xml
 }|
 
-@bold{Maintainers:} The package mirror of @tt{vk.xml} should be periodically
-updated by running @litchar{ravk show spec --latest > private/assets/vk.xml}.
-
 @subsection{@tt{ravk show gend}: Access Generator Modules}
 
 @tt{gend} (short for "generator directory") prints the location
@@ -83,10 +80,9 @@ must follow certain rules:
 @item{Every non-string element is a datum that, when printed in @racket[write] mode, is a valid Racket expression.}
 ]
 
-The output of each @racket[in-fragment] procedure will appear in the
-order declared in the command line. There is no general guarentee that
-the total output will constitute a valid program, so you have to know
-what you are asking for.
+The output of each module appears follows the order declared in the
+command line. There is no guarentee that the output will be a valid
+program, so you have to know what you are asking for.
 
 @subsection{Auditing Existing Generators}
 
@@ -198,13 +194,15 @@ in your program.}
 @section{@tt{ravk replicate}: Integrate Independently}
 
 The @tt{replicate} command generates FFI bindings for Vulkan
-with mininal protections (The output of this command is
-the @racketmodname[vulkan/unsafe] module).
+with mininal protections, making it equivalent to
+@litchar{ravk generate $(ravk show gend)/make-unsafe.rkt}.
+The output of this command implements the @racketmodname[vulkan/unsafe]
+module.
 
 This effectively locks down a copy of Racket code
 against a Vulkan spec version, and makes it possible
 for some packages to operate without a dependency
-on this collection.
+on this collection, and minimal overhead.
 
 @verbatim[#:indent 4]|{
 $ ravk replicate > unsafe.rkt
