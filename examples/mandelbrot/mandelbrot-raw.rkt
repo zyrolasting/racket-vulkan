@@ -16,7 +16,7 @@
          ffi/unsafe
          ffi/cvector
          (only-in racket/draw make-bitmap)
-         "./bindings.rkt")
+         "./bindings-raw.rkt")
 
 (define (enable-validation-layer?)
   (equal? #"true"
@@ -47,7 +47,7 @@
 
 (define (create _t f)
   (define p (malloc 'atomic _t))
-  (f p)
+  (check (f p))
   (ptr-ref p _t))
 
 (define (_char_array->bytes array)
@@ -60,14 +60,15 @@
    [b _float]
    [a _float]))
 
+(define (check r)
+  (when (not (equal? r VK_SUCCESS))
+    (error 'vulkan "Error code ~a" r)))
+
 (module+ main
   (define with-validation (enable-validation-layer?))
   (define layers (get-layers with-validation))
   (define extensions (get-extensions with-validation))
   (define instance (create-instance layers extensions with-validation))
-
-  #;(when with-validation
-    (register-debug-callback instance))
 
   (define physical-device (find-physical-device instance))
   (define queue-family-index (get-compute-queue-family-index physical-device))
@@ -129,10 +130,10 @@
 
 (define (get-layers with-validation)
   (define layer-count/p (malloc _uint32_t 'atomic))
-  (vkEnumerateInstanceLayerProperties layer-count/p #f)
+  (check (vkEnumerateInstanceLayerProperties layer-count/p #f))
   (define layer-count (ptr-ref layer-count/p _uint32_t))
   (define layer-properties/p (malloc (* layer-count (ctype-sizeof _VkLayerProperties)) 'atomic))
-  (vkEnumerateInstanceLayerProperties layer-count/p layer-properties/p)
+  (check (vkEnumerateInstanceLayerProperties layer-count/p layer-properties/p))
 
   (define validation-layer-name #"VK_LAYER_KHRONOS_validation")
   (define (validation-layer-supported?)
@@ -155,10 +156,10 @@
 
 (define (get-extensions with-validation)
   (define extension-count/p (malloc _uint32_t 'atomic))
-  (vkEnumerateInstanceExtensionProperties #f extension-count/p #f)
+  (check (vkEnumerateInstanceExtensionProperties #f extension-count/p #f))
   (define extension-count (ptr-ref extension-count/p _uint32_t))
   (define extension-properties/p (malloc (* extension-count (ctype-sizeof _VkExtensionProperties)) 'atomic))
-  (vkEnumerateInstanceExtensionProperties #f extension-count/p extension-properties/p)
+  (check (vkEnumerateInstanceExtensionProperties #f extension-count/p extension-properties/p))
 
   (define debug-extension-name #"VK_EXT_debug_report")
   (define (debug-extension-supported?)
@@ -179,7 +180,7 @@
       (cvector _bytes/nul-terminated)))
 
 (define (create-instance layers extensions with-validation)
-  (define appInfo (make-VkApplicationInfo 'VK_STRUCTURE_TYPE_APPLICATION_INFO
+  (define appInfo (make-VkApplicationInfo VK_STRUCTURE_TYPE_APPLICATION_INFO
                                           #f
                                           #"Mandelbrot"
                                           0
@@ -188,7 +189,7 @@
                                           VK_API_VERSION_1_0))
 
   (define instinfo (make-VkInstanceCreateInfo
-                    'VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
+                    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
                     #f
                     0
                     appInfo
@@ -205,13 +206,13 @@
 
 (define (find-physical-device instance)
   (define pDeviceCount (malloc _uint32_t 'atomic))
-  (vkEnumeratePhysicalDevices instance pDeviceCount #f)
+  (check (vkEnumeratePhysicalDevices instance pDeviceCount #f))
   (define num (ptr-ref pDeviceCount _uint32_t))
   (when (= num 0)
     (error "Expected more than zero physical devices."))
   (define size (* num (ctype-sizeof _VkPhysicalDevice)))
   (define physical-devices (malloc size 'atomic))
-  (vkEnumeratePhysicalDevices instance pDeviceCount physical-devices)
+  (check (vkEnumeratePhysicalDevices instance pDeviceCount physical-devices))
   (define first-device (ptr-ref physical-devices _VkPhysicalDevice 0))
   (printf "Assuming first device is good enough.~n")
   first-device)
@@ -234,7 +235,7 @@
 
   (define queue-create-info/p (make-zero _VkDeviceQueueCreateInfo _VkDeviceQueueCreateInfo-pointer))
   (define queue-create-info (ptr-ref queue-create-info/p _VkDeviceQueueCreateInfo))
-  (set-VkDeviceQueueCreateInfo-sType! queue-create-info 'VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
+  (set-VkDeviceQueueCreateInfo-sType! queue-create-info VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
   (set-VkDeviceQueueCreateInfo-queueFamilyIndex! queue-create-info queue-family-index)
   (set-VkDeviceQueueCreateInfo-queueCount! queue-create-info 1)
   (set-VkDeviceQueueCreateInfo-pQueuePriorities! queue-create-info queue-priorities/p)
@@ -242,7 +243,7 @@
   (define device-create-info/p (make-zero _VkDeviceCreateInfo))
   (define device-create-info (ptr-ref device-create-info/p _VkDeviceCreateInfo))
   (define device-features/p (make-zero _VkPhysicalDeviceFeatures _VkPhysicalDeviceFeatures-pointer))
-  (set-VkDeviceCreateInfo-sType! device-create-info 'VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO)
+  (set-VkDeviceCreateInfo-sType! device-create-info VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO)
   (set-VkDeviceCreateInfo-enabledLayerCount! device-create-info (cvector-length layers))
   (set-VkDeviceCreateInfo-ppEnabledLayerNames! device-create-info (cvector-ptr layers))
   (set-VkDeviceCreateInfo-pQueueCreateInfos! device-create-info queue-create-info/p)
@@ -250,7 +251,7 @@
   (set-VkDeviceCreateInfo-pEnabledFeatures! device-create-info device-features/p)
 
   (define logical-device/p (malloc _VkDevice 'atomic))
-  (vkCreateDevice physical-device device-create-info/p #f logical-device/p)
+  (check (vkCreateDevice physical-device device-create-info/p #f logical-device/p))
 
   (ptr-ref logical-device/p _VkDevice))
 
@@ -299,7 +300,7 @@
   (define drcci/p (make-zero _VkDebugReportCallbackCreateInfoEXT
                              _VkDebugReportCallbackCreateInfoEXT-pointer))
   (define drcci (ptr-ref drcci/p _VkDebugReportCallbackCreateInfoEXT))
-  (set-VkDebugReportCallbackCreateInfoEXT-sType! drcci 'VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT)
+  (set-VkDebugReportCallbackCreateInfoEXT-sType! drcci VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT)
   (set-VkDebugReportCallbackCreateInfoEXT-flags! drcci (bitwise-ior
                                                         VK_DEBUG_REPORT_ERROR_BIT_EXT
                                                         VK_DEBUG_REPORT_WARNING_BIT_EXT
@@ -318,22 +319,22 @@
                  -> _VkResult)))
 
   (define callback/p (malloc _PFN_vkVoidFunction 'atomic))
-  (check-vkResult (create-debug-report-callback instance
-                                                drcci/p
-                                                #f
-                                                callback/p))
+  (check (create-debug-report-callback instance
+                                       drcci/p
+                                       #f
+                                       callback/p))
   (ptr-ref callback/p _VkDebugReportCallbackEXT))
 
 (define (create-buffer logical-device buffer-size)
   (define buffer-create-info/p (make-zero _VkBufferCreateInfo _VkBufferCreateInfo-pointer))
   (define buffer-create-info (ptr-ref buffer-create-info/p _VkBufferCreateInfo))
-  (set-VkBufferCreateInfo-sType! buffer-create-info 'VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
+  (set-VkBufferCreateInfo-sType! buffer-create-info VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
   (set-VkBufferCreateInfo-size! buffer-create-info buffer-size)
   (set-VkBufferCreateInfo-usage! buffer-create-info VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
-  (set-VkBufferCreateInfo-sharingMode! buffer-create-info 'VK_SHARING_MODE_EXCLUSIVE)
+  (set-VkBufferCreateInfo-sharingMode! buffer-create-info VK_SHARING_MODE_EXCLUSIVE)
 
   (define buffer/p (malloc _VkBuffer 'atomic))
-  (vkCreateBuffer logical-device buffer-create-info/p #f buffer/p)
+  (check (vkCreateBuffer logical-device buffer-create-info/p #f buffer/p))
   (ptr-ref buffer/p _VkBuffer))
 
 (define (allocate-for-buffer physical-device logical-device buffer)
@@ -362,7 +363,7 @@
 
   (define memory-alloc-info/p (make-zero _VkMemoryAllocateInfo _VkMemoryAllocateInfo-pointer))
   (define memory-alloc-info (ptr-ref memory-alloc-info/p _VkMemoryAllocateInfo))
-  (set-VkMemoryAllocateInfo-sType! memory-alloc-info 'VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
+  (set-VkMemoryAllocateInfo-sType! memory-alloc-info VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
   (set-VkMemoryAllocateInfo-allocationSize! memory-alloc-info (VkMemoryRequirements-size memory-requirements))
   (set-VkMemoryAllocateInfo-memoryTypeIndex! memory-alloc-info
                                              (find-memory-type
@@ -370,7 +371,7 @@
                                               (bitwise-ior VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
                                                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)))
   (define buffer-memory/p (malloc _VkDeviceMemory 'atomic))
-  (vkAllocateMemory logical-device memory-alloc-info/p #f buffer-memory/p)
+  (check (vkAllocateMemory logical-device memory-alloc-info/p #f buffer-memory/p))
   (define buffer-memory (ptr-ref buffer-memory/p _VkDeviceMemory))
   (vkBindBufferMemory logical-device buffer buffer-memory 0)
   buffer-memory)
@@ -381,19 +382,19 @@
                             _VkDescriptorSetLayoutBinding-pointer))
   (define dslb (ptr-ref dslb/p _VkDescriptorSetLayoutBinding))
   (set-VkDescriptorSetLayoutBinding-binding! dslb 0)
-  (set-VkDescriptorSetLayoutBinding-descriptorType! dslb 'VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
+  (set-VkDescriptorSetLayoutBinding-descriptorType! dslb VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
   (set-VkDescriptorSetLayoutBinding-descriptorCount! dslb 1)
   (set-VkDescriptorSetLayoutBinding-stageFlags! dslb VK_SHADER_STAGE_COMPUTE_BIT)
 
   (define dslci/p (make-zero _VkDescriptorSetLayoutCreateInfo
                              _VkDescriptorSetLayoutCreateInfo-pointer))
   (define dslci (ptr-ref dslci/p _VkDescriptorSetLayoutCreateInfo))
-  (set-VkDescriptorSetLayoutCreateInfo-sType! dslci 'VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
+  (set-VkDescriptorSetLayoutCreateInfo-sType! dslci VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
   (set-VkDescriptorSetLayoutCreateInfo-bindingCount! dslci 1)
   (set-VkDescriptorSetLayoutCreateInfo-pBindings! dslci dslb/p)
 
   (define descriptor-set-layout/p (malloc _VkDescriptorSetLayout 'atomic))
-  (vkCreateDescriptorSetLayout logical-device dslci/p #f descriptor-set-layout/p)
+  (check (vkCreateDescriptorSetLayout logical-device dslci/p #f descriptor-set-layout/p))
   (values descriptor-set-layout/p
           (ptr-ref descriptor-set-layout/p _VkDescriptorSetLayout)))
 
@@ -401,31 +402,31 @@
 (define (create-descriptor-pool logical-device)
   (define dps/p (make-zero _VkDescriptorPoolSize _VkDescriptorPoolSize-pointer))
   (define dps (ptr-ref dps/p _VkDescriptorPoolSize))
-  (set-VkDescriptorPoolSize-type! dps 'VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
+  (set-VkDescriptorPoolSize-type! dps VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
   (set-VkDescriptorPoolSize-descriptorCount! dps 1)
 
   (define dpci/p (make-zero _VkDescriptorPoolCreateInfo _VkDescriptorPoolCreateInfo-pointer))
   (define dpci (ptr-ref dpci/p _VkDescriptorPoolCreateInfo))
-  (set-VkDescriptorPoolCreateInfo-sType! dpci 'VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO)
+  (set-VkDescriptorPoolCreateInfo-sType! dpci VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO)
   (set-VkDescriptorPoolCreateInfo-maxSets! dpci 1)
   (set-VkDescriptorPoolCreateInfo-poolSizeCount! dpci 1)
   (set-VkDescriptorPoolCreateInfo-pPoolSizes! dpci dps/p)
 
   (define descriptor-pool/p (malloc _VkDescriptorPool 'atomic))
-  (vkCreateDescriptorPool logical-device dpci/p #f descriptor-pool/p)
+  (check (vkCreateDescriptorPool logical-device dpci/p #f descriptor-pool/p))
   (values descriptor-pool/p
           (ptr-ref descriptor-pool/p _VkDescriptorPool)))
 
 (define (create-descriptor-set logical-device descriptor-set-layout/p descriptor-pool)
   (define dsai/p (make-zero _VkDescriptorSetAllocateInfo _VkDescriptorSetAllocateInfo-pointer))
   (define dsai (ptr-ref dsai/p _VkDescriptorSetAllocateInfo))
-  (set-VkDescriptorSetAllocateInfo-sType! dsai 'VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
+  (set-VkDescriptorSetAllocateInfo-sType! dsai VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
   (set-VkDescriptorSetAllocateInfo-descriptorPool! dsai descriptor-pool)
   (set-VkDescriptorSetAllocateInfo-descriptorSetCount! dsai 1)
   (set-VkDescriptorSetAllocateInfo-pSetLayouts! dsai descriptor-set-layout/p)
 
   (define descriptor-set/p (malloc _VkDescriptorSet 'atomic))
-  (vkAllocateDescriptorSets logical-device dsai/p descriptor-set/p)
+  (check (vkAllocateDescriptorSets logical-device dsai/p descriptor-set/p))
   (values descriptor-set/p
           (ptr-ref descriptor-set/p _VkDescriptorSet)))
 
@@ -438,11 +439,11 @@
 
   (define wds/p (make-zero _VkWriteDescriptorSet _VkWriteDescriptorSet-pointer))
   (define wds (ptr-ref wds/p _VkWriteDescriptorSet))
-  (set-VkWriteDescriptorSet-sType! wds 'VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
+  (set-VkWriteDescriptorSet-sType! wds VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
   (set-VkWriteDescriptorSet-dstSet! wds descriptor-set)
   (set-VkWriteDescriptorSet-dstBinding! wds 0)
   (set-VkWriteDescriptorSet-descriptorCount! wds 1)
-  (set-VkWriteDescriptorSet-descriptorType! wds 'VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
+  (set-VkWriteDescriptorSet-descriptorType! wds VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
   (set-VkWriteDescriptorSet-pBufferInfo! wds dbi/p)
 
   (vkUpdateDescriptorSets logical-device 1 wds/p 0 #f))
@@ -458,85 +459,85 @@
   (define code (read-file))
   (define smci/p (make-zero _VkShaderModuleCreateInfo _VkShaderModuleCreateInfo-pointer))
   (define smci (ptr-ref smci/p _VkShaderModuleCreateInfo))
-  (set-VkShaderModuleCreateInfo-sType! smci 'VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO)
+  (set-VkShaderModuleCreateInfo-sType! smci VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO)
   (set-VkShaderModuleCreateInfo-pCode! smci code)
   (set-VkShaderModuleCreateInfo-codeSize! smci (bytes-length code))
 
   (define compute-shader-module/p (malloc _VkShaderModule 'atomic))
-  (vkCreateShaderModule logical-device smci/p #f compute-shader-module/p)
+  (check (vkCreateShaderModule logical-device smci/p #f compute-shader-module/p))
   (ptr-ref compute-shader-module/p _VkShaderModule))
 
 (define (create-pipeline-layout logical-device descriptor-set-layout/p)
   (define plci/p (make-zero _VkPipelineLayoutCreateInfo
                             _VkPipelineLayoutCreateInfo-pointer))
   (define plci (ptr-ref plci/p _VkPipelineLayoutCreateInfo))
-  (set-VkPipelineLayoutCreateInfo-sType! plci 'VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
+  (set-VkPipelineLayoutCreateInfo-sType! plci VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
   (set-VkPipelineLayoutCreateInfo-setLayoutCount! plci 1)
   (set-VkPipelineLayoutCreateInfo-pSetLayouts! plci descriptor-set-layout/p)
   (define pipeline-layout/p (malloc _VkPipelineLayout 'atomic))
-  (vkCreatePipelineLayout logical-device plci/p #f pipeline-layout/p)
+  (check (vkCreatePipelineLayout logical-device plci/p #f pipeline-layout/p))
   (ptr-ref pipeline-layout/p _VkPipelineLayout))
 
 (define (create-compute-pipeline logical-device shader-module pipeline-layout)
   (define ssci/p (make-zero _VkPipelineShaderStageCreateInfo _VkPipelineShaderStageCreateInfo-pointer))
   (define ssci (ptr-ref ssci/p _VkPipelineShaderStageCreateInfo))
-  (set-VkPipelineShaderStageCreateInfo-sType! ssci 'VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
-  (set-VkPipelineShaderStageCreateInfo-stage! ssci 'VK_SHADER_STAGE_COMPUTE_BIT)
+  (set-VkPipelineShaderStageCreateInfo-sType! ssci VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
+  (set-VkPipelineShaderStageCreateInfo-stage! ssci VK_SHADER_STAGE_COMPUTE_BIT)
   (set-VkPipelineShaderStageCreateInfo-module! ssci shader-module)
   (set-VkPipelineShaderStageCreateInfo-pName! ssci #"main")
 
   (define pci/p (make-zero _VkComputePipelineCreateInfo _VkComputePipelineCreateInfo-pointer))
   (define pci (ptr-ref pci/p _VkComputePipelineCreateInfo))
-  (set-VkComputePipelineCreateInfo-sType! pci 'VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO)
+  (set-VkComputePipelineCreateInfo-sType! pci VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO)
   (set-VkComputePipelineCreateInfo-stage! pci ssci)
   (set-VkComputePipelineCreateInfo-layout! pci pipeline-layout)
 
   (define pipeline/p (malloc _VkPipeline 'atomic))
-  (vkCreateComputePipelines logical-device
-                            #f
-                            1
-                            pci/p
-                            #f
-                            pipeline/p)
+  (check (vkCreateComputePipelines logical-device
+                                   #f
+                                   1
+                                   pci/p
+                                   #f
+                                   pipeline/p))
   (ptr-ref pipeline/p _VkPipeline))
 
 (define (create-command-pool logical-device queue-family-index)
   (define cpci/p (make-zero _VkCommandPoolCreateInfo _VkCommandPoolCreateInfo-pointer))
   (define cpci (ptr-ref cpci/p _VkCommandPoolCreateInfo))
-  (set-VkCommandPoolCreateInfo-sType! cpci 'VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO)
+  (set-VkCommandPoolCreateInfo-sType! cpci VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO)
   (set-VkCommandPoolCreateInfo-flags! cpci 0)
   (set-VkCommandPoolCreateInfo-queueFamilyIndex! cpci queue-family-index)
 
   (define command-pool/p (malloc _VkCommandPool 'atomic))
-  (vkCreateCommandPool logical-device cpci/p #f command-pool/p)
+  (check (vkCreateCommandPool logical-device cpci/p #f command-pool/p))
   (ptr-ref command-pool/p _VkCommandPool))
 
 
 (define (create-command-buffer logical-device command-pool)
   (define cbai/p (make-zero _VkCommandBufferAllocateInfo _VkCommandBufferAllocateInfo-pointer))
   (define cbai (ptr-ref cbai/p _VkCommandBufferAllocateInfo))
-  (set-VkCommandBufferAllocateInfo-sType! cbai 'VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO)
+  (set-VkCommandBufferAllocateInfo-sType! cbai VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO)
   (set-VkCommandBufferAllocateInfo-commandPool! cbai command-pool)
-  (set-VkCommandBufferAllocateInfo-level! cbai 'VK_COMMAND_BUFFER_LEVEL_PRIMARY)
+  (set-VkCommandBufferAllocateInfo-level! cbai VK_COMMAND_BUFFER_LEVEL_PRIMARY)
   (set-VkCommandBufferAllocateInfo-commandBufferCount! cbai 1)
   (define command-buffer/p (malloc _VkCommandBuffer 'atomic))
-  (vkAllocateCommandBuffers logical-device cbai/p command-buffer/p)
+  (check (vkAllocateCommandBuffers logical-device cbai/p command-buffer/p))
   (values command-buffer/p
           (ptr-ref command-buffer/p _VkCommandBuffer)))
 
 (define (record-commands command-buffer pipeline pipeline-layout descriptor-set/p width height workgroup-size)
   (define cbbi/p (make-zero _VkCommandBufferBeginInfo _VkCommandBufferBeginInfo-pointer))
   (define cbbi (ptr-ref cbbi/p _VkCommandBufferBeginInfo))
-  (set-VkCommandBufferBeginInfo-sType! cbbi 'VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO)
+  (set-VkCommandBufferBeginInfo-sType! cbbi VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO)
   (set-VkCommandBufferBeginInfo-flags! cbbi VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
   (vkBeginCommandBuffer command-buffer cbbi/p)
 
   (vkCmdBindPipeline command-buffer
-                     'VK_PIPELINE_BIND_POINT_COMPUTE
+                     VK_PIPELINE_BIND_POINT_COMPUTE
                      pipeline)
 
   (vkCmdBindDescriptorSets command-buffer
-                           'VK_PIPELINE_BIND_POINT_COMPUTE
+                           VK_PIPELINE_BIND_POINT_COMPUTE
                            pipeline-layout
                            0
                            1
@@ -554,16 +555,16 @@
 (define (run-command-buffer logical-device queue command-buffer/p)
   (define si/p (make-zero _VkSubmitInfo _VkSubmitInfo-pointer))
   (define si (ptr-ref si/p _VkSubmitInfo))
-  (set-VkSubmitInfo-sType! si 'VK_STRUCTURE_TYPE_SUBMIT_INFO)
+  (set-VkSubmitInfo-sType! si VK_STRUCTURE_TYPE_SUBMIT_INFO)
   (set-VkSubmitInfo-commandBufferCount! si 1)
   (set-VkSubmitInfo-pCommandBuffers! si command-buffer/p)
 
   (define fence/p (malloc _VkFence 'atomic))
   (define fci/p (make-zero _VkFenceCreateInfo _VkFenceCreateInfo-pointer))
   (define fci (ptr-ref fci/p _VkFenceCreateInfo))
-  (set-VkFenceCreateInfo-sType! fci 'VK_STRUCTURE_TYPE_FENCE_CREATE_INFO)
+  (set-VkFenceCreateInfo-sType! fci VK_STRUCTURE_TYPE_FENCE_CREATE_INFO)
   (set-VkFenceCreateInfo-flags! fci 0)
-  (vkCreateFence logical-device fci/p #f fence/p)
+  (check (vkCreateFence logical-device fci/p #f fence/p))
   (define fence (ptr-ref fence/p _VkFence))
 
   (vkQueueSubmit queue 1 si/p fence)
@@ -572,7 +573,7 @@
 
 (define (dump-bytes logical-device buffer-size buffer-memory width height)
   (define byte/p (malloc _pointer 'atomic))
-  (vkMapMemory logical-device buffer-memory 0 buffer-size 0 byte/p)
+  (check (vkMapMemory logical-device buffer-memory 0 buffer-size 0 byte/p))
   (define pixel/p (ptr-ref byte/p _pixel-pointer))
 
   (define (cvt v)
