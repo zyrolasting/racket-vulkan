@@ -5,10 +5,11 @@
          "../spec.rkt")
 
 (define use-latest? (make-parameter #f))
+(define (get-source/dynamic) (if (use-latest?) 'remote 'local))
+(define (get-vulkan-spec/dynamic) (get-vulkan-spec (get-source/dynamic)))
 
 (define (write-generated modpath)
-  (define source (if (use-latest?) 'remote 'local))
-  (write-sequence (get-vulkan-spec source)
+  (write-sequence (get-vulkan-spec/dynamic)
                   (dynamic-require (if (string? modpath)
                                        (string->path modpath)
                                        modpath)
