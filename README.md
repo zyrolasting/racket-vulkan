@@ -1,5 +1,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Scribble](https://img.shields.io/badge/Docs-Scribble-blue.svg)](http://docs.racket-lang.org/vulkan/index.html)
+[![](https://tokei.rs/b1/github/zyrolasting/racket-vulkan)](https://github.com/zyrolasting/racket-vulkan)
 
 <p align="center">
   <img style="width: 100%" alt="Racket + Vulkan® = awesome" src="./private/assets/hero.png">
