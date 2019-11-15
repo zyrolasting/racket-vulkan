@@ -27,6 +27,10 @@
      (make-immutable-hash (map (λ (x) (cons (get-type-name x) x))
                                types)))))
 
+;;; Generator configuration space
+(define enable-auto-check-vkresult (make-parameter #f))
+
+
 ;; Type names appear in attribute or in CDATA of <name> element.
 ;; https://www.khronos.org/registry/vulkan/specs/1.1/registry.html#_attributes_of_type_tags
 (define (get-type-name type-element)

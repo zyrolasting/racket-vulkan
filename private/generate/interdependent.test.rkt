@@ -3,6 +3,7 @@
 (module+ test
   (require rackunit
            racket/list
+           "./shared.rkt"
            "./interdependent.rkt")
 
   (test-case "(generate-union-signature)"
@@ -226,25 +227,36 @@
                           (name "pCreateInfo")))
                  '_pointer))
 
-  (test-equal? "(generate-command-signature)"
-               (generate-command-signature
-                '(command
-                  (proto (type "VkResult") " " (name "vkCreateInstance"))
-                  (param "const "
-                         (type "VkInstanceCreateInfo")
-                         "* "
-                         (name "pCreateInfo"))
-                  (param ((optional "true"))
-                         "const "
-                         (type "VkAllocationCallbacks")
-                         "* "
-                         (name "pAllocator"))
-                  (param (type "VkInstance")
-                         "* "
-                         (name "pInstance"))))
-               '(define-vulkan vkCreateInstance
-                  (_fun _pointer
-                        _pointer
-                        _pointer
-                        -> (r : _VkResult)
-                        -> (check-vkResult r 'vkCreateInstance)))))
+  (test-case "(generate-command-signature)"
+    (define command-xexpr
+      '(command
+        (proto (type "VkResult") " " (name "vkCreateInstance"))
+        (param "const "
+               (type "VkInstanceCreateInfo")
+               "* "
+               (name "pCreateInfo"))
+        (param ((optional "true"))
+               "const "
+               (type "VkAllocationCallbacks")
+               "* "
+               (name "pAllocator"))
+        (param (type "VkInstance")
+               "* "
+               (name "pInstance"))))
+    (parameterize ([enable-auto-check-vkresult #t])
+      (test-equal? "With auto-check"
+                   (generate-command-signature command-xexpr)
+                   '(define-vulkan vkCreateInstance
+                      (_fun _pointer
+                            _pointer
+                            _pointer
+                            -> (r : _VkResult)
+                            -> (check-vkResult r 'vkCreateInstance)))))
+    (parameterize ([enable-auto-check-vkresult #f])
+      (test-equal? "Without auto-check"
+                   (generate-command-signature command-xexpr)
+                   '(define-vulkan vkCreateInstance
+                      (_fun _pointer
+                            _pointer
+                            _pointer
+                            -> (r : _VkResult)))))))

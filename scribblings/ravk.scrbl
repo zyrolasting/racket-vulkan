@@ -59,7 +59,7 @@ to change and should not be considered part of a stable API. However,
 the modules that happen to be there are considered valid input to
 @tt{ravk generate}. That command @italic{is} stable.
 
-@section{@tt{ravk generate}}
+@section{@tt{ravk generate}: Generate Code to use Vulkan}
 
 @verbatim[#:indent 4]|{
 $ ravk generate heading.rkt body.rkt footer.rkt ...
@@ -67,7 +67,7 @@ $ ravk generate heading.rkt body.rkt footer.rkt ...
 
 The @tt{generate} command prints code to STDOUT. The output
 may be a full Racket module body complete with a @litchar{#lang} line,
-or a parseable fragment that follows unstated assumptions.
+or a parseable fragment that follows certain assumptions.
 
 Use this command to inspect the Vulkan registry with
 custom views, or to prepare code with an adjustable
@@ -176,6 +176,14 @@ The possibilities are exciting, but some words of warning:
 @item{The Vulkan specification is machine-readable, but human-comprehensible. Expect to write weird and wonderful things to make your program work reliably. Mostly weird.}
 @item{There are no guarentees that the order of data you encounter is the order it should appear in Racket.}
 ]
+
+@subsection{Generator Configuration Space}
+
+The built-in code generators share a set of parameters
+that control their output. You can control them using
+command-line flags.
+
+@itemlist[@item{@litchar{--enable-auto-check-vkresult}: When set, all foreign function calls that return a @tt{VkResult} will be automatically checked in a wrapping Racket procedure. If the code is an error code, the wrapping procedure will raise @racket[exn:fail].}]
 
 @section{@tt{ravk replicate}: Integrate Independently}
 

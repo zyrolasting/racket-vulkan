@@ -473,6 +473,8 @@
 
   (define param-elements (cdr children))
   (define type-specs (map generate-type-spec param-elements))
+  (define auto-check-return-code? (and (equal? undecorated-return "VkResult")
+                                       (enable-auto-check-vkresult)))
 
   `(define-vulkan ,id
      (_fun ,@type-specs
@@ -480,5 +482,5 @@
            ,(if (equal? ret '_void)
                 ret
                 `(r : ,ret))
-           . ,(generate-maybe-wrapper (equal? undecorated-return "VkResult")
+           . ,(generate-maybe-wrapper auto-check-return-code?
                                       id))))

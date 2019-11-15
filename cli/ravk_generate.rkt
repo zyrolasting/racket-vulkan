@@ -9,12 +9,18 @@
          (only-in mzlib/etc this-expression-file-name)
          natural-cli
          "./shared.rkt"
+         "../private/generate/shared.rkt"
          "../private/writer.rkt")
 
 (define program-name (get-program-name (this-expression-file-name)))
 
 (define (process-command-line)
   (command-line #:program program-name
+                #:once-each
+                [("--enable-auto-check-vkresult")
+                 ("When set, foreign function wrappers will automatically "
+                  "check VkResult values and raise exceptions for error codes.")
+                 (enable-auto-check-vkresult #t)]
                 #:args module-paths
                 (for ([module-path module-paths])
                   (write-generated module-path))))
