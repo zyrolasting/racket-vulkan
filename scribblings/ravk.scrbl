@@ -19,7 +19,6 @@ can specify which to use.
 @verbatim[#:indent 4]|{
 $ ravk ...           # Use local mirror of vk.xml
 $ ravk --latest ...  # (or -l) Use latest vk.xml from the Khronos Group.
-$ ravk --spec /path/to/vk.xml # Use your own
 }|
 
 @section{@tt{ravk show}: Review key information}
