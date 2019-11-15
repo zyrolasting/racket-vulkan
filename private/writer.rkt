@@ -17,18 +17,6 @@
   (for ([declaration (stream-rest seq)])
     (writeln declaration out)))
 
-;; Generate unsafe.rkt as follows:
-;;
-;;   $ raco rvk-gen ./private/generate/make-unsake.rkt > unsafe.rkt
-;;
-;; Use other modules to verify output of different sections of code.
-(module+ main
-  (require racket/cmdline
-           "../spec.rkt")
-  (write-sequence (get-vulkan-spec 'local)
-                  (dynamic-require (command-line #:args (p) p)
-                                   'in-fragment)))
-
 (module+ test
   (require racket/generator
            racket/port

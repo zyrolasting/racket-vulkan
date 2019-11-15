@@ -11,8 +11,9 @@
 (provide
  vulkan-spec-sources/c
  (contract-out
-  [get-vulkan-spec     (-> vulkan-spec-sources/c vulkan-spec?)] ; Computes Vulkan API spec
-  [vulkan-spec?        (-> any/c boolean?)]))       ; Returns if argument is a Vulkan specification according to this library
+  [get-spec-port   (-> vulkan-spec-sources/c input-port?)]
+  [get-vulkan-spec (-> vulkan-spec-sources/c vulkan-spec?)] ; Computes Vulkan API spec
+  [vulkan-spec?    (-> any/c boolean?)]))       ; Returns if argument is a Vulkan specification according to this library
 
 ; Specification sources can be the local file system, or a remote system on the Internet
 (define vulkan-spec-sources/c (symbols 'local 'remote))
@@ -60,8 +61,7 @@
         (display (port->string (source-spec-from-internet)) port)))))
 
 ; Returns an input port given a desired source
-(define/contract (get-spec-port source)
-  (-> vulkan-spec-sources/c input-port?)
+(define (get-spec-port source)
   (if (eq? source 'local)
     (source-spec-from-local-mirror)
     (source-spec-from-internet)))
