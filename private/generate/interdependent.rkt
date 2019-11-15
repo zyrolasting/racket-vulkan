@@ -13,10 +13,6 @@
     (define ordered (curate-registry registry))
     (define lookup (get-type-lookup ordered))
 
-    ; To be clear, this is a superset of the category attribute values
-    ; you'd expect to find in the Vulkan registry. (curate-registry)
-    ; introduced a few of its own, and they are not restricted to
-    ; <type> elements.
     (define category=>proc
       `#hash(("enum"         . ,generate-enum-signature)
              ("bitmask"      . ,generate-bitmask-signature)
@@ -363,19 +359,26 @@
             '_ufixint)
         '_uint))
 
-  `(begin
-     (define ,(cname name)
-       (,ctype
-        ',(for/fold ([decls '()])
-                    ([enumerant (in-list pairs)])
-            ; The ctype declaration assumes a list of form (name0 = val0 name1 = val1 ...)
-            (define w/value (cons (cdr enumerant) decls))
-            (define w/= (cons '= w/value))
-            (define w/all (cons (string->symbol (car enumerant)) w/=))
-            w/all)
-        ,basetype))
-     . ,(for/list ([enumerant (in-list (reverse pairs))])
-          `(define ,(string->symbol (car enumerant)) ,(cdr enumerant)))))
+  (define declared-enumerants
+    (for/list ([enumerant (in-list (reverse pairs))])
+      `(define ,(string->symbol (car enumerant)) ,(cdr enumerant))))
+
+  (if (enable-symbolic-enums)
+      `(begin
+         (define ,(cname name)
+           (,ctype
+            ',(for/fold ([decls '()])
+                        ([enumerant (in-list pairs)])
+                ; The ctype declaration assumes a list of form (name0 = val0 name1 = val1 ...)
+                (define w/value (cons (cdr enumerant) decls))
+                (define w/= (cons '= w/value))
+                (define w/all (cons (string->symbol (car enumerant)) w/=))
+                w/all)
+            ,basetype))
+         . ,declared-enumerants)
+      `(begin
+         (define ,(cname name) ,basetype)
+         . ,declared-enumerants)))
 
 
 ;; ------------------------------------------------------------------

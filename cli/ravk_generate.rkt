@@ -21,6 +21,10 @@
                  ("When set, foreign function wrappers will automatically "
                   "check VkResult values and raise exceptions for error codes.")
                  (enable-auto-check-vkresult #t)]
+                [("--enable-symbolic-enums")
+                 ("When set, C enum types are represented using _enum and _bitmask"
+                  "types in your bindings.")
+                 (enable-symbolic-enums #t)]
                 #:args module-paths
                 (for ([module-path module-paths])
                   (write-generated module-path))))

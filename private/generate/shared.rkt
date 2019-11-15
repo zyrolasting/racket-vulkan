@@ -29,6 +29,7 @@
 
 ;;; Generator configuration space
 (define enable-auto-check-vkresult (make-parameter #f))
+(define enable-symbolic-enums (make-parameter #f))
 
 
 ;; Type names appear in attribute or in CDATA of <name> element.
