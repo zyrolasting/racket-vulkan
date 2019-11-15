@@ -16,4 +16,4 @@ $ ravk generate --enable-auto-check-vkresult \
                 $(ravk show gend)/make-unsafe.rkt > bindings.rkt
 ```
 
-`bindings-raw.rkt` was created using `ravk replicate > bindings-raw.rkt`.
+`bindings-raw.rkt` was created using `ravk generate unsafe > bindings-raw.rkt`.
