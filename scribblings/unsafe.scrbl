@@ -51,7 +51,6 @@ not 1-to-1, but it is close enough where you can compare the below
 list of translation rules against a Vulkan specification document
 to know what bindings are available:
 
-@margin-note{To repeat, the interface is unstable and these items are subject to change.}
 @itemlist[
 @item{All identifiers acting as C types are prefixed with an underscore. So, the C type @tt{VkInstance} is bound to the @tt{_VkInstance} identifier in Racket.}
 @item{API constants and enumerants have identifiers bound to a Racket value. e.g. @tt{VK_API_VERSION_1_1}.}
