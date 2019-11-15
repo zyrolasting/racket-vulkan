@@ -9,5 +9,7 @@
 (define (write-generated modpath)
   (define source (if (use-latest?) 'remote 'local))
   (write-sequence (get-vulkan-spec source)
-                  (dynamic-require modpath
+                  (dynamic-require (if (string? modpath)
+                                       (string->path modpath)
+                                       modpath)
                                    'in-fragment)))

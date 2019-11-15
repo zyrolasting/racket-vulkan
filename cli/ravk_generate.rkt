@@ -15,5 +15,6 @@
 
 (define (process-command-line)
   (command-line #:program program-name
-                #:args (module-path)
-                (write-generated module-path)))
+                #:args module-paths
+                (for ([module-path module-paths])
+                  (write-generated module-path))))

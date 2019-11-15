@@ -61,6 +61,10 @@ the modules that happen to be there are considered valid input to
 
 @section{@tt{ravk generate}}
 
+@verbatim[#:indent 4]|{
+$ ravk generate heading.rkt body.rkt footer.rkt ...
+}|
+
 The @tt{generate} command prints code to STDOUT. The output
 may be a full Racket module body complete with a @litchar{#lang} line,
 or a parseable fragment that follows unstated assumptions.
@@ -78,6 +82,11 @@ must follow certain rules:
 @item{The first element of the sequence may be a string. If it is a string, it must be a complete @litchar{#lang} line. A trailing newline character is optional.}
 @item{Every non-string element is a datum that, when printed in @racket[write] mode, is a valid Racket expression.}
 ]
+
+The output of each @racket[in-fragment] procedure will appear in the
+order declared in the command line. There is no general guarentee that
+the total output will constitute a valid program, so you have to know
+what you are asking for.
 
 @subsection{Auditing Existing Generators}
 
