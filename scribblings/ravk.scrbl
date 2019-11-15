@@ -84,19 +84,9 @@ program, so you have to know what you are asking for.
 @subsection{Using Built-in Generators}
 
 Besides paths to Racket modules, you can symbolically refer
-to built-in generators. For example, this command prints all Vulkan
-API constants as a sequence of Racket @racket[(define)] forms.
-
-@verbatim[#:indent 4]|{
-$ ravk generate api-constants
-}|
-
-If you run into a problem with the specification or the Racket
-code produced from this collection, you or a maintainer can
-leverage this to verify code fragments.
-
-In addition, the output of @litchar{ravk generate unsafe}
-is the content of @racketmodname[vulkan/unsafe].
+to built-in generators. In addition, the output of
+@litchar{ravk generate unsafe} in particular is the
+content of @racketmodname[vulkan/unsafe].
 
 This effectively locks down a copy of Racket code against a Vulkan
 spec version, and makes it possible for some packages to operate
@@ -106,6 +96,12 @@ without a dependency on this collection, and with minimal overhead.
 $ ravk generate unsafe > unsafe.rkt
 }|
 
+Here are the currently supported built-in generators:
+
+@tabular[
+#:style 'boxed
+#:column-properties '(left right)
+'(("unsafe" "FFI bindings for Vulkan across all platforms and extensions for the given specification."))]
 
 @subsection{Example: Your First Code Generator}
 
