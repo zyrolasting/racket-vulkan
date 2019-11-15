@@ -28,6 +28,7 @@
 (define (VK_VERSION_MAJOR v) (arithmetic-shift v -22))
 (define (VK_VERSION_MINOR v) (bitwise-and (arithmetic-shift v -12) 1023))
 (define (VK_VERSION_PATCH v) (bitwise-and v 4095))
+(define (format-vulkan-spec-version spec-v) (format "~a.~a.~a" (VK_VERSION_MAJOR spec-v) (VK_VERSION_MINOR spec-v) (VK_VERSION_PATCH spec-v)))
 (define -success-codes (quote (VK_TIMEOUT VK_SUCCESS VK_EVENT_RESET VK_NOT_READY VK_SUBOPTIMAL_KHR VK_INCOMPLETE VK_EVENT_SET)))
 (define (check-vkResult v who) (unless (member v -success-codes) (error who "failed: ~a" v)))
 (define _char _sbyte)
