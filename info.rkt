@@ -4,7 +4,7 @@
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))
 (define scribblings '(("scribblings/vulkan.scrbl" (multi-page))))
 (define pkg-desc "Vulkan integration for Racket")
-(define version "0.0")
+(define version "1.0")
 (define pkg-authors '("Sage Gerard"))
 (define test-omit-paths '(#rx"unsafe" #rx"examples"))
 (define racket-launcher-libraries '("cli/ravk.rkt"))

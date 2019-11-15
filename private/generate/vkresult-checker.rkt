@@ -4,7 +4,7 @@
 (require racket/set
          "./shared.rkt")
 
-(define (in-fragment registry)
+(define (in-fragment registry [config #hash()])
   (define with-success-codes
     (findf*-txexpr registry
                    (λ (x) (attrs-have-key? x 'successcodes))))

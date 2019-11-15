@@ -7,7 +7,7 @@
 ;; We embed unsafe-preamble.rkt directly so that clients
 ;; can generate low-level bindings that can operate
 ;; outside of the vulkan collection.
-(define (in-fragment registry)
+(define (in-fragment registry [config #hash()])
   (in-generator
    (call-with-input-file
      (build-path private-path "unsafe-preamble.rkt")

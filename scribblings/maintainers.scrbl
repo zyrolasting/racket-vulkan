@@ -61,7 +61,7 @@ ravk --latest show spec > /path/to/vk.xml
 # Regenerate the unsafe FFI bindings.
 # If this errors out, a code generator hit a runtime error
 # and is likely incompatible with the XML update.
-ravk replicate > /path/to/unsafe.rkt
+ravk generate unsafe > /path/to/unsafe.rkt
 
 # Recompile the project.
 # If this errors out, the unsafe bindings contain

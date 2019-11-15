@@ -3,6 +3,7 @@
 (module+ test
   (require rackunit
            racket/list
+           "./shared.rkt"
            "./interdependent.rkt")
 
   (test-case "(generate-union-signature)"
@@ -134,18 +135,22 @@
                                    (enum ((value "2") (name "VK_BLEND_OP_REVERSE_SUBTRACT")))
                                    (enum ((value "3") (name "VK_BLEND_OP_MIN")))
                                    (enum ((value "4") (name "VK_BLEND_OP_MAX"))))))
-    (check-equal?
-     (generate-enum-signature '(type ((category "enum") (name "VkBlendOp")))
-                              enum-registry)
-     '(begin
-        (define _VkBlendOp
-          (_enum '(VK_BLEND_OP_ADD = 0
-                   VK_SHIMMED = 1
-                   VK_BLEND_OP_SUBTRACT = 1
-                   VK_BLEND_OP_REVERSE_SUBTRACT = 2
-                   VK_BLEND_OP_MIN = 3
-                   VK_BLEND_OP_MAX = 4)
-                 _ufixint))
+
+    (let ([config #hash((enable-symbolic-enums . #t))])
+      (check-equal?
+       (generate-enum-signature '(type ((category "enum") (name "VkBlendOp")))
+                                enum-registry
+                                #hash()
+                                config)
+       '(begin
+          (define _VkBlendOp
+            (_enum '(VK_BLEND_OP_ADD = 0
+                                     VK_SHIMMED = 1
+                                     VK_BLEND_OP_SUBTRACT = 1
+                                     VK_BLEND_OP_REVERSE_SUBTRACT = 2
+                                     VK_BLEND_OP_MIN = 3
+                                     VK_BLEND_OP_MAX = 4)
+                   _ufixint))
           (define VK_BLEND_OP_ADD 0)
           (define VK_SHIMMED 1)
           (define VK_BLEND_OP_SUBTRACT 1)
@@ -153,33 +158,76 @@
           (define VK_BLEND_OP_MIN 3)
           (define VK_BLEND_OP_MAX 4)))
 
-    (check-equal?
-     (generate-enum-signature '(type ((category "enum") (name "NotPresent")))
-                              enum-registry)
-     '(begin (define _NotPresent (_enum '() _ufixint))))
+      (check-equal?
+       (generate-enum-signature '(type ((category "enum") (name "NotPresent")))
+                                enum-registry
+                                #hash()
+                                config)
+       '(begin (define _NotPresent (_enum '() _ufixint))))
 
-    (check-equal?
-     (generate-enum-signature '(type ((category "enum") (name "VkShaderStageFlagBits")))
-                              enum-registry)
-     '(begin
-        (define _VkShaderStageFlagBits
-          (_bitmask '(VK_SHADER_STAGE_VERTEX_BIT = 1
-                      VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT = 2
-                      VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT = 4
-                      VK_SHADER_STAGE_GEOMETRY_BIT = 8
-                      VK_SHADER_STAGE_FRAGMENT_BIT = 16
-                      VK_SHADER_STAGE_COMPUTE_BIT = 32
-                      VK_SHADER_STAGE_ALL_GRAPHICS = 31
-                      VK_SHADER_STAGE_ALL = 2147483647)
-                    _uint))
-        (define VK_SHADER_STAGE_VERTEX_BIT 1)
-        (define VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT 2)
-        (define VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT 4)
-        (define VK_SHADER_STAGE_GEOMETRY_BIT 8)
-        (define VK_SHADER_STAGE_FRAGMENT_BIT 16)
-        (define VK_SHADER_STAGE_COMPUTE_BIT 32)
-        (define VK_SHADER_STAGE_ALL_GRAPHICS 31)
-        (define VK_SHADER_STAGE_ALL 2147483647))))
+      (check-equal?
+       (generate-enum-signature '(type ((category "enum") (name "VkShaderStageFlagBits")))
+                                enum-registry
+                                #hash()
+                                config)
+       '(begin
+          (define _VkShaderStageFlagBits
+            (_bitmask '(VK_SHADER_STAGE_VERTEX_BIT = 1
+                                                   VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT = 2
+                                                   VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT = 4
+                                                   VK_SHADER_STAGE_GEOMETRY_BIT = 8
+                                                   VK_SHADER_STAGE_FRAGMENT_BIT = 16
+                                                   VK_SHADER_STAGE_COMPUTE_BIT = 32
+                                                   VK_SHADER_STAGE_ALL_GRAPHICS = 31
+                                                   VK_SHADER_STAGE_ALL = 2147483647)
+                      _uint))
+          (define VK_SHADER_STAGE_VERTEX_BIT 1)
+          (define VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT 2)
+          (define VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT 4)
+          (define VK_SHADER_STAGE_GEOMETRY_BIT 8)
+          (define VK_SHADER_STAGE_FRAGMENT_BIT 16)
+          (define VK_SHADER_STAGE_COMPUTE_BIT 32)
+          (define VK_SHADER_STAGE_ALL_GRAPHICS 31)
+          (define VK_SHADER_STAGE_ALL 2147483647))))
+
+    (let ([config #hash()])
+      (check-equal?
+       (generate-enum-signature '(type ((category "enum") (name "VkBlendOp")))
+                                enum-registry
+                                #hash()
+                                config)
+       '(begin
+          (define _VkBlendOp _ufixint)
+          (define VK_BLEND_OP_ADD 0)
+          (define VK_SHIMMED 1)
+          (define VK_BLEND_OP_SUBTRACT 1)
+          (define VK_BLEND_OP_REVERSE_SUBTRACT 2)
+          (define VK_BLEND_OP_MIN 3)
+          (define VK_BLEND_OP_MAX 4)))
+
+      (check-equal?
+       (generate-enum-signature '(type ((category "enum") (name "NotPresent")))
+                                enum-registry
+                                #hash()
+                                config)
+       '(begin (define _NotPresent _ufixint)))
+
+      (check-equal?
+       (generate-enum-signature '(type ((category "enum") (name "VkShaderStageFlagBits")))
+                                enum-registry
+                                #hash()
+                                config)
+       '(begin
+          (define _VkShaderStageFlagBits _uint)
+          (define VK_SHADER_STAGE_VERTEX_BIT 1)
+          (define VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT 2)
+          (define VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT 4)
+          (define VK_SHADER_STAGE_GEOMETRY_BIT 8)
+          (define VK_SHADER_STAGE_FRAGMENT_BIT 16)
+          (define VK_SHADER_STAGE_COMPUTE_BIT 32)
+          (define VK_SHADER_STAGE_ALL_GRAPHICS 31)
+          (define VK_SHADER_STAGE_ALL 2147483647)))))
+
 
   (test-equal? "(generate-bitmask-signature)"
                (generate-bitmask-signature '(type ((category "bitmask"))
@@ -226,25 +274,36 @@
                           (name "pCreateInfo")))
                  '_pointer))
 
-  (test-equal? "(generate-command-signature)"
-               (generate-command-signature
-                '(command
-                  (proto (type "VkResult") " " (name "vkCreateInstance"))
-                  (param "const "
-                         (type "VkInstanceCreateInfo")
-                         "* "
-                         (name "pCreateInfo"))
-                  (param ((optional "true"))
-                         "const "
-                         (type "VkAllocationCallbacks")
-                         "* "
-                         (name "pAllocator"))
-                  (param (type "VkInstance")
-                         "* "
-                         (name "pInstance"))))
-               '(define-vulkan vkCreateInstance
-                  (_fun _pointer
-                        _pointer
-                        _pointer
-                        -> (r : _VkResult)
-                        -> (check-vkResult r 'vkCreateInstance)))))
+  (test-case "(generate-command-signature)"
+    (define command-xexpr
+      '(command
+        (proto (type "VkResult") " " (name "vkCreateInstance"))
+        (param "const "
+               (type "VkInstanceCreateInfo")
+               "* "
+               (name "pCreateInfo"))
+        (param ((optional "true"))
+               "const "
+               (type "VkAllocationCallbacks")
+               "* "
+               (name "pAllocator"))
+        (param (type "VkInstance")
+               "* "
+               (name "pInstance"))))
+    (let ([config #hash((enable-auto-check-vkresult . #t))])
+      (test-equal? "With auto-check"
+                   (generate-command-signature command-xexpr #f #hash() config)
+                   '(define-vulkan vkCreateInstance
+                      (_fun _pointer
+                            _pointer
+                            _pointer
+                            -> (r : _VkResult)
+                            -> (check-vkResult r 'vkCreateInstance)))))
+    (let ([config #hash()])
+      (test-equal? "Without auto-check"
+                   (generate-command-signature command-xexpr config)
+                   '(define-vulkan vkCreateInstance
+                      (_fun _pointer
+                            _pointer
+                            _pointer
+                            -> (r : _VkResult)))))))

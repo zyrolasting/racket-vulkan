@@ -5,7 +5,7 @@
          "./shared.rkt")
 
 ;; Declare all Vulkan API constants as Racket code.
-(define (in-fragment registry)
+(define (in-fragment registry [config #hash()])
   (in-generator
    (yield (generate-define-constant-signature registry "VK_HEADER_VERSION"))
    (yield (generate-define-constant-signature registry "VK_NULL_HANDLE"))
