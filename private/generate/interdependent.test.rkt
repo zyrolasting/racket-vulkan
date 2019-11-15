@@ -136,10 +136,12 @@
                                    (enum ((value "3") (name "VK_BLEND_OP_MIN")))
                                    (enum ((value "4") (name "VK_BLEND_OP_MAX"))))))
 
-    (parameterize ([enable-symbolic-enums #t])
+    (let ([config #hash((enable-symbolic-enums . #t))])
       (check-equal?
        (generate-enum-signature '(type ((category "enum") (name "VkBlendOp")))
-                                enum-registry)
+                                enum-registry
+                                #hash()
+                                config)
        '(begin
           (define _VkBlendOp
             (_enum '(VK_BLEND_OP_ADD = 0
@@ -158,12 +160,16 @@
 
       (check-equal?
        (generate-enum-signature '(type ((category "enum") (name "NotPresent")))
-                                enum-registry)
+                                enum-registry
+                                #hash()
+                                config)
        '(begin (define _NotPresent (_enum '() _ufixint))))
 
       (check-equal?
        (generate-enum-signature '(type ((category "enum") (name "VkShaderStageFlagBits")))
-                                enum-registry)
+                                enum-registry
+                                #hash()
+                                config)
        '(begin
           (define _VkShaderStageFlagBits
             (_bitmask '(VK_SHADER_STAGE_VERTEX_BIT = 1
@@ -184,10 +190,12 @@
           (define VK_SHADER_STAGE_ALL_GRAPHICS 31)
           (define VK_SHADER_STAGE_ALL 2147483647))))
 
-    (parameterize ([enable-symbolic-enums #f])
+    (let ([config #hash()])
       (check-equal?
        (generate-enum-signature '(type ((category "enum") (name "VkBlendOp")))
-                                enum-registry)
+                                enum-registry
+                                #hash()
+                                config)
        '(begin
           (define _VkBlendOp _ufixint)
           (define VK_BLEND_OP_ADD 0)
@@ -199,12 +207,16 @@
 
       (check-equal?
        (generate-enum-signature '(type ((category "enum") (name "NotPresent")))
-                                enum-registry)
+                                enum-registry
+                                #hash()
+                                config)
        '(begin (define _NotPresent _ufixint)))
 
       (check-equal?
        (generate-enum-signature '(type ((category "enum") (name "VkShaderStageFlagBits")))
-                                enum-registry)
+                                enum-registry
+                                #hash()
+                                config)
        '(begin
           (define _VkShaderStageFlagBits _uint)
           (define VK_SHADER_STAGE_VERTEX_BIT 1)
@@ -278,18 +290,18 @@
         (param (type "VkInstance")
                "* "
                (name "pInstance"))))
-    (parameterize ([enable-auto-check-vkresult #t])
+    (let ([config #hash((enable-auto-check-vkresult . #t))])
       (test-equal? "With auto-check"
-                   (generate-command-signature command-xexpr)
+                   (generate-command-signature command-xexpr #f #hash() config)
                    '(define-vulkan vkCreateInstance
                       (_fun _pointer
                             _pointer
                             _pointer
                             -> (r : _VkResult)
                             -> (check-vkResult r 'vkCreateInstance)))))
-    (parameterize ([enable-auto-check-vkresult #f])
+    (let ([config #hash()])
       (test-equal? "Without auto-check"
-                   (generate-command-signature command-xexpr)
+                   (generate-command-signature command-xexpr config)
                    '(define-vulkan vkCreateInstance
                       (_fun _pointer
                             _pointer

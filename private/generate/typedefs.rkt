@@ -7,7 +7,7 @@
 (provide (all-defined-out))
 (require "./shared.rkt")
 
-(define (in-fragment registry)
+(define (in-fragment registry [config #hash()])
   (in-generator
    (for ([element (get-type-by-category "basetype" registry)])
      (yield (generate-basetype-signature element)))))

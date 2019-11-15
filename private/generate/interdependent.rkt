@@ -8,7 +8,7 @@
          graph
          "./shared.rkt")
 
-(define (in-fragment registry)
+(define (in-fragment registry [config #hash()])
   (in-generator
     (define ordered (curate-registry registry))
     (define lookup (get-type-lookup ordered))
@@ -29,7 +29,7 @@
         (yield (if alias
                    (let ([namer (if (tag=? 'command type) string->symbol cname)])
                      `(define ,(namer (get-type-name type)) ,(namer alias)))
-                   (make-datum type registry lookup)))))))
+                   (make-datum type registry lookup config)))))))
 
 (define collect-enums
   (memoizer (λ (registry)
@@ -42,7 +42,6 @@
                                   h))
                      #hash()
                      (collect-enums registry)))))
-
 
 
 ;; Unfortunately the registry makes no guarentee that types will appear
@@ -144,7 +143,7 @@
                                     (λ _ ctype)))
       `(_list-struct ,ctype)))
 
-(define (generate-union-signature union-xexpr [registry #f] [lookup #hash()])
+(define (generate-union-signature union-xexpr . _)
   (define members (get-elements-of-tag 'member union-xexpr))
   (define name (get-type-name union-xexpr))
   `(begin
@@ -164,7 +163,7 @@
 ;; ------------------------------------------------
 ;; C structs correspond to <type category="struct">
 
-(define (generate-struct-signature struct-xexpr [registry #f] [lookup #hash()])
+(define (generate-struct-signature struct-xexpr [registry #f] [lookup #hash()] [config #hash()])
   (define struct-name (get-type-name struct-xexpr))
   (define (generate-member-signature member-xexpr)
     (define name (snatch-cdata 'name member-xexpr))
@@ -257,7 +256,7 @@
                 '())))))
 
 
-(define (generate-enum-signature enum-xexpr registry [lookup #hash()])
+(define (generate-enum-signature enum-xexpr registry [lookup #hash()] [config #hash()])
   (define name (get-type-name enum-xexpr))
   (define extension-lookup (collect-extensions-by-enum-name registry))
   (define enum-lookup (collect-enumerants-by-name/all registry))
@@ -363,7 +362,7 @@
     (for/list ([enumerant (in-list (reverse pairs))])
       `(define ,(string->symbol (car enumerant)) ,(cdr enumerant))))
 
-  (if (enable-symbolic-enums)
+  (if (hash-ref config 'enable-symbolic-enums #f)
       `(begin
          (define ,(cname name)
            (,ctype
@@ -386,7 +385,7 @@
 ; to contain a typedef. Declaring _bitmask in Racket actually happens
 ; as part of processing enums.
 
-(define (generate-bitmask-signature bitmask-xexpr [registry #f] [lookup #hash()])
+(define (generate-bitmask-signature bitmask-xexpr . _)
   (define alias (attr-ref bitmask-xexpr 'alias #f))
   `(define ,(cname (get-type-name bitmask-xexpr))
      ,(cname (or alias
@@ -402,7 +401,7 @@
 ;; strings after the parameter types. The return type is not even
 ;; in a tag at all, so I have a different approach to deduce it.
 
-(define (generate-funcpointer-signature funcpointer-xexpr [registry #f] [lookup #hash()])
+(define (generate-funcpointer-signature funcpointer-xexpr [registry #f] [lookup #hash()] [config #hash()])
   (define name (get-type-name funcpointer-xexpr))
   (define text-signature (get-all-cdata funcpointer-xexpr))
 
@@ -459,7 +458,7 @@
       (cname ctype/text)))
 
 
-(define (generate-command-signature command-xexpr [registry #f] [lookup #hash()])
+(define (generate-command-signature command-xexpr [registry #f] [lookup #hash()] [config #hash()])
   (define children (filter (λ (x) (and (txexpr? x)
                                        (member (get-tag x) '(param proto))))
                            (get-elements command-xexpr)))
@@ -477,7 +476,7 @@
   (define param-elements (cdr children))
   (define type-specs (map generate-type-spec param-elements))
   (define auto-check-return-code? (and (equal? undecorated-return "VkResult")
-                                       (enable-auto-check-vkresult)))
+                                       (hash-ref config 'enable-auto-check-vkresult #f)))
 
   `(define-vulkan ,id
      (_fun ,@type-specs

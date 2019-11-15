@@ -9,7 +9,7 @@
 (require racket/string
          "./shared.rkt")
 
-(define (in-fragment registry)
+(define (in-fragment registry [config #hash()])
   (in-generator
    (for ([element (get-type-by-category "define" registry)])
      (unless (is-c-macro? element)

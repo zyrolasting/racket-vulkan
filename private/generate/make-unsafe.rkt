@@ -20,7 +20,7 @@
 (require-fg "./defines.rkt" in-relevant-preprocessor-declarations)
 (require-fg "./interdependent.rkt" in-interdependent-declarations)
 
-(define (in-fragment registry)
+(define (in-fragment registry [config #hash()])
   (in-generator
     (yield* (in-preamble registry))
     (yield* (in-check-vkResult-signature registry))

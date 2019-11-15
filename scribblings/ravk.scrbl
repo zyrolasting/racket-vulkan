@@ -1,6 +1,6 @@
 #lang scribble/manual
 
-@require[@for-label[racket/base ffi/unsafe]]
+@require[@for-label[racket/base racket/dict ffi/unsafe xml vulkan/spec]]
 
 @title{@tt{ravk}: Vulkan Ecosystem Controls}
 
@@ -38,23 +38,7 @@ generate code.
 $ ravk show spec           # prints local mirror of vk.xml for offline use.
 $ ravk show spec --xexpr   # (or -x) prints vk.xml as an X-expression. Ignored if -v is set.
 $ ravk show spec --version # (or -v) Show specification version.
-$ ravk -l show spec -x     # X-expression of latest vk.xml
-}|
-
-@subsection{@tt{ravk show gend}: Access Generator Modules}
-
-@tt{gend} (short for "generator directory") prints the location
-of generator modules on your system.
-@verbatim[#:indent 4]|{
-$ ls `ravk show gend`
-api-constants.rkt ...
-}|
-
-Be warned that this command invites access to code inside the
-collection's installation on your system. The contents are subject
-to change and should not be considered part of a stable API. However,
-the modules that happen to be there are considered valid input to
-@tt{ravk generate}. That command @italic{is} stable.
+$ ravk -l show spec -x     # X-expression of latest vk.xml}|
 
 @section{@tt{ravk generate}: Generate Code to use Vulkan}
 
@@ -70,35 +54,57 @@ Use this command to inspect the Vulkan registry with
 custom views, or to prepare code with an adjustable
 level of overhead.
 
-The arguments are paths to Racket modules that must provide
-a procedure called @racket[in-fragment]. @racket[in-fragment]
-must follow certain rules:
+The arguments are paths to Racket modules that must provide a
+procedure called @racket[in-fragment]. It returns a sequence of Racket
+code given a Vulkan specification and a shared configuration.
 
-@itemlist[
-@item{It accepts an X-expression of some @racket[vk.xml] and returns a sequence.}
-@item{The first element of the sequence may be a string. If it is a string, it must be a complete @litchar{#lang} line. A trailing newline character is optional.}
-@item{Every non-string element is a datum that, when printed in @racket[write] mode, is a valid Racket expression.}
-]
+@racketblock[
+(require racket/generator)
+
+(define (in-fragment registry [config #hash()])
+  (in-generator
+    (yield "#lang racket/base")
+    (yield '(define something 1))))]
+
+If the first element of the sequence is a string, it will be printed in @racket[display]
+mode. This is to support @litchar{#lang} lines. In this case, a trailing newline character
+is optional. In all other cases, each element of the sequence is a datum that, when printed
+in @racket[write] mode, will appear in a file as a valid Racket expression.
+
+@racket[config] is populated by the @tt{ravk generate} command such that the long form
+name of each option is a key in the dictionary (e.g. @litchar{--enable-auto-check-vkresult}
+has the key @racket['enable-auto-check-vkresult]. Keys might not be present, and the value
+of each key depends on the option. See @secref{genconfig}.
+}
 
 The output of each module appears follows the order declared in the
 command line. There is no guarentee that the output will be a valid
 program, so you have to know what you are asking for.
 
-@subsection{Auditing Existing Generators}
+@subsection{Using Built-in Generators}
 
-To review the code this collection generates in whole or in part,
-use one of the modules from @tt{ravk show gen}.
-
-For example, this command prints all Vulkan API constants
-as a sequence of Racket @racket[(define)] forms.
+Besides paths to Racket modules, you can symbolically refer
+to built-in generators. For example, this command prints all Vulkan
+API constants as a sequence of Racket @racket[(define)] forms.
 
 @verbatim[#:indent 4]|{
-$ ravk generate "$(ravk show gend)/api-constants.rkt"
+$ ravk generate api-constants
 }|
 
 If you run into a problem with the specification or the Racket
 code produced from this collection, you or a maintainer can
-leverage this tool to verify code fragments.
+leverage this to verify code fragments.
+
+In addition, the output of @litchar{ravk generate unsafe}
+is the content of @racketmodname[vulkan/unsafe].
+
+This effectively locks down a copy of Racket code against a Vulkan
+spec version, and makes it possible for some packages to operate
+without a dependency on this collection, and with minimal overhead.
+
+@verbatim[#:indent 4]|{
+$ ravk generate unsafe > unsafe.rkt
+}|
 
 
 @subsection{Example: Your First Code Generator}
@@ -173,11 +179,17 @@ The possibilities are exciting, but some words of warning:
 @item{There are no guarentees that the order of data you encounter is the order it should appear in Racket.}
 ]
 
-@subsection{Generator Configuration Space}
+@subsection[#:tag "genconfig"]{Generator Configuration Space}
 
-The built-in code generators share a set of parameters
-that control their output. You can control them using
-command-line flags.
+The built-in code generators share configuration that controls
+their output. You can control this configuration using command-line
+flags.
+
+@subsubsection{Switches}
+
+The following values are booleans for @racket[in-fragment]'s purposes.
+If the flag is not set, the key will not be set in the dictionary
+passed to @racket[in-fragment].
 
 @itemlist[
 @item{@litchar{--enable-auto-check-vkresult}: When set, all foreign
@@ -190,20 +202,3 @@ depending on their intended use. You must then use symbols to represent
 enumerants according to the rules of @racket[_enum] or @racket[_bitmask]
 in your program.}
 ]
-
-@section{@tt{ravk replicate}: Integrate Independently}
-
-The @tt{replicate} command generates FFI bindings for Vulkan
-with mininal protections, making it equivalent to
-@litchar{ravk generate $(ravk show gend)/make-unsafe.rkt}.
-The output of this command implements the @racketmodname[vulkan/unsafe]
-module.
-
-This effectively locks down a copy of Racket code
-against a Vulkan spec version, and makes it possible
-for some packages to operate without a dependency
-on this collection, and minimal overhead.
-
-@verbatim[#:indent 4]|{
-$ ravk replicate > unsafe.rkt
-}|
