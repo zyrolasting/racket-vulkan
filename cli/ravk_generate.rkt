@@ -26,11 +26,11 @@
   (define config (make-hash))
   (command-line #:program program-name
                 #:once-each
-                [("--enable-auto-check-vkresult")
+                [("--enable-auto-check-vkresult" "-r")
                  ("When set, foreign function wrappers will automatically "
                   "check VkResult values and raise exceptions for error codes.")
                  (hash-set! config 'enable-auto-check-vkresult #t)]
-                [("--enable-symbolic-enums")
+                [("--enable-symbolic-enums" "-e")
                  ("When set, C enum types are represented using _enum and _bitmask"
                   "types in your bindings.")
                  (hash-set! config 'enable-symbolic-enums #t)]
