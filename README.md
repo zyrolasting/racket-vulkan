@@ -17,9 +17,23 @@ _Vulkan and the Vulkan logo are registered trademarks of the Khronos Group Inc._
 - [x] Vulkan 1.1 support, and the means to adapt to future specs
 - [x] All platform bindings exposed
 
+## Quick start
+
+```console
+$ raco pkg install vulkan
+$ ravk generate unsafe > unsafe.rkt
+```
+
+This generates Racket bindings using the local `vk.xml` mirror that
+comes with the package. From here, you can `(require "unsafe.rkt")`
+and use Vulkan from the dependent module [according to the
+manual][unsafe].
+
 ## Support the project
 In addition to sharing the project on social media, there's room
 to help this project keep up with Vulkan.
 
 * [Purchase Support](https://sagegerard.com/subscribe.html)
 * [Donations](https://www.paypal.me/sagegerard)
+
+[unsafe]: https://docs.racket-lang.org/vulkan/Unsafe_Bindings.html

@@ -12,13 +12,18 @@
 The unsafe module is exactly as the name implies.
 @bold{Use at your own risk.}
 
-@racketmodname[vulkan/unsafe] provides over 2200 bindings representing
-all supported and deprecated Vulkan structs, unions, enumerated types,
-constants and functions across all platforms, extensions, and
-published Vulkan API verions. There are few protections against
-misuse. @italic{Any mistakes risk undefined behavior, race
-conditions, and memory leaks}. Do not expect clear error messages,
-strong validation, or concise code.
+@racketmodname[vulkan/unsafe] is just the output of @litchar{ravk
+generate unsafe}. You can generate your own copy to use Vulkan
+bindings according to this section without a dependency on this
+collection.
+
+A copy of @racketmodname[vulkan/unsafe] provides over 2200 bindings
+representing all supported and deprecated Vulkan structs, unions,
+enumerated types, constants and functions across all platforms,
+extensions, and published Vulkan API verions. There are few
+protections against misuse. @italic{Any mistakes risk undefined
+behavior, race conditions, and memory leaks}. Do not expect clear
+error messages, strong validation, or concise code.
 
 Here you will also find platform-specific code,
 necessary loading calls to communicate with Vulkan,
