@@ -13,7 +13,7 @@ run `raco make bindings*.rkt` first.
 ```console
 $ ravk generate --enable-auto-check-vkresult \
                 --enable-symbolic-enums \
-                $(ravk show gend)/make-unsafe.rkt > bindings.rkt
+                ravk generate unsafe > bindings.rkt
 ```
 
 `bindings-raw.rkt` was created using `ravk generate unsafe > bindings-raw.rkt`.
