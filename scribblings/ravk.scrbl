@@ -75,7 +75,6 @@ in @racket[write] mode, will appear in a file as a valid Racket expression.
 name of each option is a key in the dictionary (e.g. @litchar{--enable-auto-check-vkresult}
 has the key @racket['enable-auto-check-vkresult]. Keys might not be present, and the value
 of each key depends on the option. See @secref{genconfig}.
-}
 
 The output of each module appears follows the order declared in the
 command line. There is no guarentee that the output will be a valid
