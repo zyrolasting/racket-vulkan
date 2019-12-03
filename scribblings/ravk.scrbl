@@ -1,6 +1,13 @@
 #lang scribble/manual
 
-@require[@for-label[racket/base racket/dict ffi/unsafe xml vulkan/spec]]
+@require[@for-label[racket/base
+                    racket/dict
+                    racket/generator
+                    racket/string
+                    ffi/unsafe
+                    @only-in[txexpr findf*-txexpr
+                                    attr-ref]
+                    vulkan/spec]]
 
 @title{@tt{ravk}: Vulkan Ecosystem Controls}
 
