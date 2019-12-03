@@ -49,10 +49,10 @@ contents. To update the project, maintainers should periodically write
 a new version of the XML mirror, regenerate a Vulkan integration, and
 run all relevant tests.
 
-I normally update like so, assuming the package is installed on my
-system using @litchar{raco pkg install --link}. I do not use the
-actual paths to the relevant files in the event they move around the
-project.
+Here is a session I normally use to update the project, assuming the
+package is installed on the system using @litchar{raco pkg install
+--link}. I use fake paths to relevant files in the below snippet in
+case the actual files move around the project.
 
 @verbatim[#:indent 4]|{
 # Download the latest vk.xml and replace the local mirror
