@@ -158,8 +158,7 @@ Extracts version numbers from a value constructed by @racket[VK_MAKE_VERSION].
 
 @defproc[(check-vkResult [v any/c] [who symbol?]) void?]{
 Equivalent to @racket[(error who "failed: ~a" v)] if @racket[v] is not
-a @tt{VkResult} success code. This procedure is implicitly applied
-after all calls to foreign functions returning a VkResult.
+a @tt{VkResult} success code.
 }
 
 @defproc[(format-vulkan-spec-version [spec-version exact-positive-integer?]) string?]{
