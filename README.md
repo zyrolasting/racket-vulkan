@@ -1,3 +1,4 @@
+[![](https://img.shields.io/badge/%E2%99%A5-Support%20Ethical%20Software-red)](https://sagegerard.com/subscribe.html)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Scribble](https://img.shields.io/badge/Docs-Scribble-blue.svg)](http://docs.racket-lang.org/vulkan/index.html)
 [![](https://tokei.rs/b1/github/zyrolasting/racket-vulkan)](https://github.com/zyrolasting/racket-vulkan)
@@ -28,12 +29,5 @@ This generates Racket bindings using the local `vk.xml` mirror that
 comes with the package. From here, you can `(require "unsafe.rkt")`
 and use Vulkan from the dependent module [according to the
 manual][unsafe].
-
-## Support the project
-In addition to sharing the project on social media, there's room
-to help this project keep up with Vulkan.
-
-* [Purchase Support](https://sagegerard.com/subscribe.html)
-* [Donations](https://www.paypal.me/sagegerard)
 
 [unsafe]: https://docs.racket-lang.org/vulkan/Unsafe_Bindings.html
