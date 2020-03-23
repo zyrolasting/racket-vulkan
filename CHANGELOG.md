@@ -19,6 +19,9 @@ out with this project, then you should use the latest version.
 ## [Unreleased]
 Nothing yet.
 
+## [1.2] - 2020-03-23
+* Synchronized implementation to v1.2 specification
+
 ## [1.1] - 2019-11-12
 * Add missing `compatibility-lib` declaration
 
@@ -35,7 +38,8 @@ Nothing yet.
 * Work on monolithic code generator
 * Add tiny examples
 
-[Unreleased]: https://github.com/zyrolasting/racket-vulkan/compare/v1.1...HEAD
+[Unreleased]: https://github.com/zyrolasting/racket-vulkan/compare/v1.2...HEAD
+[1.2]: https://github.com/zyrolasting/racket-vulkan/compare/v1.1...v1.2
 [1.1]: https://github.com/zyrolasting/racket-vulkan/compare/v1.0...v1.1
 [1.0]: https://github.com/zyrolasting/racket-vulkan/compare/v0.0...v1.0
 [0.0]: https://github.com/zyrolasting/racket-vulkan/releases/tag/v0.0

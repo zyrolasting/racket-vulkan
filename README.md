@@ -15,7 +15,7 @@ _Vulkan and the Vulkan logo are registered trademarks of the Khronos Group Inc._
 - [x] Faithful replication of the raw Vulkan API
 - [x] Opt-in safety and conveniences
 - [x] Powerful code generators that target any `vk.xml`
-- [x] Vulkan 1.1 support, and the means to adapt to future specs
+- [x] Vulkan 1.2 support, and the means to adapt to future specs
 - [x] All platform bindings exposed
 
 ## Quick start
