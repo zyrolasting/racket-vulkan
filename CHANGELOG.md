@@ -21,6 +21,7 @@ Nothing yet.
 
 ## [1.2] - 2020-03-23
 * Synchronized implementation to v1.2 specification
+* Patch bug where generated union declarations have `void` members.
 
 ## [1.1] - 2019-11-12
 * Add missing `compatibility-lib` declaration

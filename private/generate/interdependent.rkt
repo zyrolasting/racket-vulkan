@@ -137,7 +137,8 @@
   (define cdata (get-all-cdata member-xexpr))
   (define characters (string->list cdata))
   (define array-size-match (regexp-match #px"\\[([^\\]]+)\\]" cdata))
-  (define ctype (cname undecorated-type))
+  (define as-cname (cname undecorated-type))
+  (define ctype (if (eq? as-cname '_void) '_pointer as-cname))
   (if array-size-match
       `(_list-struct . ,(build-list (string->number (cadr array-size-match))
                                     (λ _ ctype)))
