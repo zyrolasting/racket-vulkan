@@ -91,7 +91,7 @@
 (define (extract-value enumerant)
   (define value (attr-ref enumerant 'value))
   (if (string-contains? value "\"")
-      (string->bytes/utf-8 value)
+      (string->bytes/utf-8 (string-replace value "\"" ""))
       (let ([num-expr (c-numeric-lit->number value)])
         (if (equal? (attr-ref enumerant 'dir #f) "-1")
             `(* -1 ,num-expr)
