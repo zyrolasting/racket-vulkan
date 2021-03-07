@@ -14,7 +14,9 @@
 
 (define (generate-basetype-signature type-xexpr)
   (define name (get-type-name type-xexpr))
-  (define original-type (shrink-wrap-cdata
-                         (findf (λ (x) (tag=? 'type x))
-                                (get-elements type-xexpr))))
-  `(define ,(cname name) ,(cname original-type)))
+  (define maybe-type-element (findf (λ (x) (tag=? 'type x)) (get-elements type-xexpr)))
+  (define original-type (if maybe-type-element (shrink-wrap-cdata maybe-type-element) name))
+  `(define ,(cname name)
+     ,(if (equal? name original-type)
+          `',(string->symbol name)
+          (cname original-type))))
