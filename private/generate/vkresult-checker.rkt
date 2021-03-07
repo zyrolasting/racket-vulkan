@@ -20,5 +20,5 @@
   (list
      `(define -success-codes ',(set->list possible-codes))
      `(define (check-vkResult v who)
-        (unless (member v -success-codes)
+        (unless (if (symbol? v) (member v -success-codes) (>= v 0))
           (error who "failed: ~a" v)))))

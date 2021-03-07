@@ -30,7 +30,7 @@
 (define (VK_VERSION_PATCH v) (bitwise-and v 4095))
 (define (format-vulkan-spec-version spec-v) (format "~a.~a.~a" (VK_VERSION_MAJOR spec-v) (VK_VERSION_MINOR spec-v) (VK_VERSION_PATCH spec-v)))
 (define -success-codes (quote (VK_OPERATION_NOT_DEFERRED_KHR VK_THREAD_DONE_KHR VK_EVENT_SET VK_OPERATION_DEFERRED_KHR VK_SUCCESS VK_INCOMPLETE VK_THREAD_IDLE_KHR VK_SUBOPTIMAL_KHR VK_NOT_READY VK_TIMEOUT VK_EVENT_RESET)))
-(define (check-vkResult v who) (unless (member v -success-codes) (error who "failed: ~a" v)))
+(define (check-vkResult v who) (unless (if (symbol? v) (member v -success-codes) (>= v 0)) (error who "failed: ~a" v)))
 (define _char _sbyte)
 (define _uint8_t _uint8)
 (define _uint16_t _uint16)
