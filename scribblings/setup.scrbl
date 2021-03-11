@@ -17,7 +17,7 @@ follow the second set of instructions.
 @item{Install this package using @litchar{raco pkg install vulkan}}
 @item{Install the @hyperlink["https://www.lunarg.com/vulkan-sdk/"]{Vulkan SDK},
 or the latest graphic drivers for your system with Vulkan support.}
-@item{Confirm that @litchar{libvulkan.so} (Linux, etc.) or @litchar{vulkan1.dll}
+@item{Confirm that @litchar{libvulkan.so} (Linux, etc.) or @litchar{vulkan-1.dll}
 (Windows) are accessible via @racket[get-lib-search-dirs].}
 ]
 
@@ -30,7 +30,7 @@ or the latest graphic drivers for your system with Vulkan support.}
 @item{In the new directory, run @litchar{raco pkg install --link} to install the collection as a link to your copy of the source.}
 @item{Install the @hyperlink["https://www.lunarg.com/vulkan-sdk/"]{Vulkan SDK} or the latest graphic drivers for your system
 with Vulkan support.}
-@item{Confirm that @litchar{libvulkan.so} (Linux, etc.) or @litchar{vulkan1.dll}
+@item{Confirm that @litchar{libvulkan.so} (Linux, etc.) or @litchar{vulkan-1.dll}
 (Windows) are accessible via @racket[get-lib-search-dirs].}
 @item{Run the unit tests using @litchar{raco test -x -p vulkan} to verify that the code is operational.}
 @item{Run @litchar{racket examples/minimal.rkt} in the repository to make sure you can create and destroy a Vulkan instance.}]

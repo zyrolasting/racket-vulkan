@@ -4,7 +4,7 @@
 (require ffi/unsafe ffi/unsafe/define)
 
 (define libname (case (system-type 'os)
-                  [(windows) "vulkan"]
+                  [(windows) "vulkan-1"]
                   [else "libvulkan"]))
 
 (define-ffi-definer define-vulkan (ffi-lib libname)
