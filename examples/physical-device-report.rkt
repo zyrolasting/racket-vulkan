@@ -56,7 +56,7 @@
   (vkDestroyInstance instance #f))
 
 (define (createInstance)
-  (define appInfo (make-VkApplicationInfo 'VK_STRUCTURE_TYPE_APPLICATION_INFO
+  (define appInfo (make-VkApplicationInfo VK_STRUCTURE_TYPE_APPLICATION_INFO
                                           #f
                                           #"Physical Device Report"
                                           0
@@ -65,7 +65,7 @@
                                           VK_API_VERSION_1_1))
 
   (define instinfo (make-VkInstanceCreateInfo
-                    'VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
+                    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
                     #f
                     0
                     appInfo
