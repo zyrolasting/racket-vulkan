@@ -131,7 +131,7 @@
             [(string-contains? literal "L")
              ;; this case doesn't currently occur, but maybe it will in the future?
              '_long]
-            [else '_int])
+            [else '_int]))
         255)
-       ,(not (string-contains? literal "U"))))
+       ,(not (string-contains? literal "U")))
       ,sub-op))
