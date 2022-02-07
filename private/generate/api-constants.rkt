@@ -125,7 +125,13 @@
 
   `(- (integer-bytes->integer
        (make-bytes
-        (ctype-sizeof ,(if (string-contains? literal "LL") '_llong '_long))
+        (ctype-sizeof
+         ,(cond
+            [(string-contains? literal "LL") '_llong]
+            [(string-contains? literal "L")
+             ;; this case doesn't currently occur, but maybe it will in the future?
+             '_long]
+            [else '_int])
         255)
-       ,(string-contains? literal "U"))
+       ,(not (string-contains? literal "U"))))
       ,sub-op))

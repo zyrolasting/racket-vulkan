@@ -287,7 +287,8 @@
     (define base-value 1000000000)
     (define range-size 1000)
     (define offset (string->number (attr-ref enumerant 'offset)))
-    (+ base-value (* (- ext-number 1) range-size) offset))
+    (define sign (if (equal? "-" (attr-ref enumerant 'dir #f)) -1 1))
+    (* sign (+ base-value (* (- ext-number 1) range-size) offset)))
 
   ; Empty enums are possible.
   ; https://github.com/KhronosGroup/Vulkan-Docs/issues/1060
