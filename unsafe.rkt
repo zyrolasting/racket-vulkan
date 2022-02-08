@@ -1,8 +1,7 @@
 #lang racket/base
 (provide (all-defined-out))
-(require ffi/unsafe ffi/unsafe/define)
-(define libname (case (system-type (quote os)) ((windows) "vulkan-1") (else "libvulkan")))
-(define-ffi-definer define-vulkan (ffi-lib libname) #:default-make-fail make-not-available)
+(require ffi/unsafe ffi/unsafe/define (only-in setup/dirs get-lib-search-dirs))
+(define-ffi-definer define-vulkan (let ((os (system-type (quote os)))) (define libname (case os ((windows) "vulkan") (else "libvulkan"))) (define (get-lib-dirs) (define vulkan-sdk (getenv "VULKAN_SDK")) (append (get-lib-search-dirs) (if (path-string? vulkan-sdk) (list (build-path (expand-user-path vulkan-sdk) "lib")) null) (case os ((macosx) (list "/usr/local/lib")) (else null)))) (ffi-lib libname (list "1" #f) #:get-lib-dirs get-lib-dirs)) #:default-make-fail make-not-available)
 (define _VisualID _ulong)
 (define _Window _ulong)
 (define _RROutput _ulong)

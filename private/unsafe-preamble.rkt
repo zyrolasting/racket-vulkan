@@ -1,13 +1,30 @@
 #lang racket/base
 
 (provide (all-defined-out))
-(require ffi/unsafe ffi/unsafe/define)
+(require ffi/unsafe ffi/unsafe/define
+         (only-in setup/dirs get-lib-search-dirs))
 
-(define libname (case (system-type 'os)
-                  [(windows) "vulkan-1"]
-                  [else "libvulkan"]))
+(define-ffi-definer define-vulkan
+  (let ([os (system-type 'os)])
+    (define libname (case os
+                      [(windows) "vulkan"]
+                      [else "libvulkan"]))
 
-(define-ffi-definer define-vulkan (ffi-lib libname)
+    (define (get-lib-dirs)
+      (define vulkan-sdk (getenv "VULKAN_SDK"))
+      (append
+       (get-lib-search-dirs)
+       (if (path-string? vulkan-sdk)
+           (list (build-path (expand-user-path vulkan-sdk) "lib"))
+           null)
+       (case os
+         [(macosx)
+          ;; MacOS LunarG installer puts libs here:
+          (list "/usr/local/lib")]
+         [else null])))
+
+    (ffi-lib libname (list "1" #f)
+             #:get-lib-dirs get-lib-dirs))
   #:default-make-fail make-not-available)
 
 (define _VisualID _ulong)
