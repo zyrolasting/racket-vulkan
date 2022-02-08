@@ -348,7 +348,8 @@
     (or (index-where ordinals
                      (λ (i)
                        (and (> (bitwise-and type-bits
-                                            (arithmetic-shift i 1)))
+                                            (arithmetic-shift i 1))
+                               0)
                             (= (bitwise-and
                                 (VkMemoryType-propertyFlags
                                  (array-ref
@@ -484,7 +485,7 @@
   (set-VkPipelineShaderStageCreateInfo-sType! ssci VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
   (set-VkPipelineShaderStageCreateInfo-stage! ssci VK_SHADER_STAGE_COMPUTE_BIT)
   (set-VkPipelineShaderStageCreateInfo-module! ssci shader-module)
-  (set-VkPipelineShaderStageCreateInfo-pName! ssci #"main")
+  (set-VkPipelineShaderStageCreateInfo-pName! ssci #"main\0")
 
   (define pci/p (make-zero _VkComputePipelineCreateInfo _VkComputePipelineCreateInfo-pointer))
   (define pci (ptr-ref pci/p _VkComputePipelineCreateInfo))
